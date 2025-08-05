@@ -5,6 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 from jira_search.config import Config
 from jira_search.database import Database, DatabaseError
+from jira_search.search import AdvancedSearch, SearchError, JQLError, RegexError
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,9 @@ def create_app(config: Config) -> Flask:
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'jira-search-secret-key'  # For session management
     
-    # Initialize database connection
+    # Initialize database connection and search engine
     db = Database(config)
+    search_engine = AdvancedSearch(db, timeout_seconds=config.search_timeout_seconds)
     
     @app.route('/')
     def index():
@@ -65,13 +67,8 @@ def create_app(config: Config) -> Flask:
             }), 400
         
         try:
-            # Perform search based on mode
-            if mode == 'natural':
-                results, total = db.search_issues(query, limit=limit, offset=offset)
-            else:
-                # For now, treat all modes as natural language
-                # TODO: Implement JQL and regex modes in Phase 4
-                results, total = db.search_issues(query, limit=limit, offset=offset)
+            # Perform search using advanced search engine
+            results, total = search_engine.search(query, mode, limit=limit, offset=offset)
             
             # Calculate query time
             query_time_ms = int((time.time() - start_time) * 1000)
@@ -110,10 +107,18 @@ def create_app(config: Config) -> Flask:
                 'query_time_ms': query_time_ms
             })
             
-        except DatabaseError as e:
+        except (SearchError, JQLError, RegexError) as e:
             logger.error(f"Search error: {e}")
             return jsonify({
-                'error': f'Search failed: {str(e)}',
+                'error': str(e),
+                'results': [],
+                'total': 0,
+                'query_time_ms': int((time.time() - start_time) * 1000)
+            }), 400
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return jsonify({
+                'error': f'Database error: {str(e)}',
                 'results': [],
                 'total': 0,
                 'query_time_ms': int((time.time() - start_time) * 1000)
@@ -232,6 +237,52 @@ def create_app(config: Config) -> Flask:
         except Exception as e:
             logger.error(f"Issue detail error: {e}")
             return jsonify({'error': 'Internal server error'}), 500
+    
+    @app.route('/api/validate')
+    def api_validate():
+        """Validate JQL or regex query syntax.
+        
+        Query parameters:
+        - q: Query to validate (required)
+        - mode: Query mode ('jql' or 'regex', required)
+        
+        Returns:
+        JSON response with validation result
+        """
+        query = request.args.get('q', '').strip()
+        mode = request.args.get('mode', '').lower()
+        
+        if not query:
+            return jsonify({
+                'valid': False,
+                'error': 'Query parameter "q" is required'
+            }), 400
+        
+        if mode not in ['jql', 'regex']:
+            return jsonify({
+                'valid': False,
+                'error': 'Mode must be "jql" or "regex"'
+            }), 400
+        
+        try:
+            if mode == 'jql':
+                is_valid, error_msg = search_engine.validate_jql(query)
+            else:  # regex
+                is_valid, error_msg = search_engine.validate_regex(query)
+            
+            return jsonify({
+                'valid': is_valid,
+                'error': error_msg,
+                'mode': mode,
+                'query': query
+            })
+            
+        except Exception as e:
+            logger.error(f"Validation error: {e}")
+            return jsonify({
+                'valid': False,
+                'error': f'Validation failed: {str(e)}'
+            }), 500
     
     @app.route('/api/status')
     def api_status():

@@ -95,6 +95,73 @@
             background: #2980b9;
         }
 
+        .search-help {
+            margin-top: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            font-size: 14px;
+        }
+
+        .search-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .example-section {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .example-section strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .example-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .example-section li {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .example-section code {
+            background: #ecf0f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+
+        .validation-message {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .validation-message.error {
+            background: #fee;
+            color: #c0392b;
+            border: 1px solid #f5b7b1;
+        }
+
+        .validation-message.success {
+            background: #eaffea;
+            color: #27ae60;
+            border: 1px solid #a9dfbf;
+        }
+
         .results-container {
             background: white;
             border-radius: 8px;
@@ -266,11 +333,44 @@
                    placeholder="Search issues... (try team names like 'ACS', work types like 'Quality', or any text)"
                    autocomplete="off">
             
+            <div id="searchHelp" class="search-help" style="display: none;">
+                <div class="search-examples">
+                    <div class="example-section">
+                        <strong>Natural Language Examples:</strong>
+                        <ul>
+                            <li><code>ACS automation team quality</code> - Find issues with these keywords</li>
+                            <li><code>security vulnerability</code> - Search across all text fields</li>
+                            <li><code>documentation</code> - Find docs-related issues</li>
+                        </ul>
+                    </div>
+                    <div class="example-section">
+                        <strong>JQL Examples:</strong>
+                        <ul>
+                            <li><code>project = ROX AND status = "In Progress"</code></li>
+                            <li><code>assignee = "John Doe" AND priority = High</code></li>
+                            <li><code>team = "ACS Automation" AND status != Done</code></li>
+                            <li><code>created >= "2025-01-01"</code></li>
+                        </ul>
+                    </div>
+                    <div class="example-section">
+                        <strong>Regex Examples:</strong>
+                        <ul>
+                            <li><code>ROX-\d{5}</code> - Find issues with 5-digit numbers</li>
+                            <li><code>(critical|blocker).*security</code> - Critical security issues</li>
+                            <li><code>^[Ff]ix.*[Bb]ug</code> - Issues starting with "Fix" and containing "bug"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             <div class="search-modes">
                 <button class="search-mode active" data-mode="natural">Natural Language</button>
                 <button class="search-mode" data-mode="jql">JQL</button>
                 <button class="search-mode" data-mode="regex">Regex</button>
+                <button class="search-mode" data-mode="help" style="margin-left: auto;">❓ Examples</button>
             </div>
+            
+            <div id="validationMessage" class="validation-message"></div>
         </div>
 
         <div id="resultsContainer" class="results-container" style="display: none;">
@@ -289,36 +389,73 @@
     <script>
         let currentMode = 'natural';
         let searchTimeout = null;
+        let validationTimeout = null;
 
         // Initialize event listeners
         document.addEventListener('DOMContentLoaded', function() {
             const searchBox = document.getElementById('searchBox');
             const modeButtons = document.querySelectorAll('.search-mode');
+            const searchHelp = document.getElementById('searchHelp');
             
             // Search input handling
             searchBox.addEventListener('input', function() {
                 clearTimeout(searchTimeout);
+                clearTimeout(validationTimeout);
                 const query = this.value.trim();
                 
                 if (query.length >= 2) {
+                    // Validate JQL/Regex queries
+                    if (currentMode === 'jql' || currentMode === 'regex') {
+                        validationTimeout = setTimeout(() => validateQuery(query), 500);
+                    }
+                    
                     searchTimeout = setTimeout(() => performSearch(query), 300);
                 } else {
                     hideResults();
+                    hideValidation();
                 }
             });
 
             // Search mode selection
             modeButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    // Update active mode
-                    modeButtons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    currentMode = this.dataset.mode;
+                    const mode = this.dataset.mode;
                     
-                    // Re-search if there's a query
+                    if (mode === 'help') {
+                        // Toggle help display
+                        if (searchHelp.style.display === 'none') {
+                            searchHelp.style.display = 'block';
+                            this.textContent = '❌ Hide Examples';
+                        } else {
+                            searchHelp.style.display = 'none';
+                            this.textContent = '❓ Examples';
+                        }
+                        return;
+                    }
+                    
+                    // Update active mode (exclude help button)
+                    modeButtons.forEach(b => {
+                        if (b.dataset.mode !== 'help') {
+                            b.classList.remove('active');
+                        }
+                    });
+                    this.classList.add('active');
+                    currentMode = mode;
+                    
+                    // Update placeholder text
+                    updatePlaceholder();
+                    
+                    // Re-validate and search if there's a query
                     const query = searchBox.value.trim();
                     if (query.length >= 2) {
+                        if (currentMode === 'jql' || currentMode === 'regex') {
+                            validateQuery(query);
+                        } else {
+                            hideValidation();
+                        }
                         performSearch(query);
+                    } else {
+                        hideValidation();
                     }
                 });
             });
@@ -333,6 +470,55 @@
                 }
             });
         });
+
+        function updatePlaceholder() {
+            const searchBox = document.getElementById('searchBox');
+            const placeholders = {
+                'natural': 'Search issues... (try team names like "ACS", work types like "Quality", or any text)',
+                'jql': 'Enter JQL query... (e.g., project = ROX AND status = "In Progress")',
+                'regex': 'Enter regex pattern... (e.g., ROX-\\d{5} for 5-digit issue numbers)'
+            };
+            searchBox.placeholder = placeholders[currentMode] || placeholders['natural'];
+        }
+
+        async function validateQuery(query) {
+            if (currentMode === 'natural') return;
+            
+            try {
+                const params = new URLSearchParams({
+                    q: query,
+                    mode: currentMode
+                });
+                
+                const response = await fetch(`/api/validate?${params}`);
+                const data = await response.json();
+                
+                showValidation(data.valid, data.error);
+                
+            } catch (error) {
+                console.error('Validation error:', error);
+                showValidation(false, 'Validation failed');
+            }
+        }
+
+        function showValidation(isValid, errorMessage) {
+            const validationDiv = document.getElementById('validationMessage');
+            
+            if (isValid) {
+                validationDiv.className = 'validation-message success';
+                validationDiv.textContent = '✓ Query syntax is valid';
+            } else {
+                validationDiv.className = 'validation-message error';
+                validationDiv.textContent = `✗ ${errorMessage}`;
+            }
+            
+            validationDiv.style.display = 'block';
+        }
+
+        function hideValidation() {
+            const validationDiv = document.getElementById('validationMessage');
+            validationDiv.style.display = 'none';
+        }
 
         async function performSearch(query) {
             const startTime = Date.now();
