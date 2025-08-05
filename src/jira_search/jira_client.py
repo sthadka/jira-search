@@ -44,10 +44,10 @@ class JiraClient:
         self.last_request_time = 0
         self.min_request_interval = 60.0 / self.rate_limit  # seconds between requests
         
-        # Session for connection pooling
+        # Session for connection pooling with Bearer token authentication
         self.session = requests.Session()
-        self.session.auth = (self.username, self.pat)
         self.session.headers.update({
+            'Authorization': f"Bearer {self.pat}",
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         })
@@ -88,7 +88,7 @@ class JiraClient:
             
             if response.status_code == 401:
                 raise JiraAuthenticationError(
-                    "Authentication failed. Please check your username and Personal Access Token."
+                    "Authentication failed. Please check your Personal Access Token."
                 )
             elif response.status_code == 403:
                 raise JiraAuthenticationError(
