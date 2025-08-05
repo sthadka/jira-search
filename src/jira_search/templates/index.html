@@ -162,6 +162,246 @@
             border: 1px solid #a9dfbf;
         }
 
+        .suggestions-container {
+            position: relative;
+        }
+
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.highlighted {
+            background-color: #f8f9fa;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-icon {
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .suggestion-label {
+            flex: 1;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .suggestion-type {
+            font-size: 11px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Issue Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-title {
+            flex: 1;
+            margin: 0;
+            font-size: 20px;
+            color: #2c3e50;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+            padding: 0;
+            margin-left: 20px;
+        }
+
+        .modal-close:hover {
+            color: #2c3e50;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .issue-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .issue-description {
+            margin-bottom: 24px;
+        }
+
+        .issue-description h3 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .issue-description-content {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .issue-comments {
+            margin-bottom: 24px;
+        }
+
+        .issue-comments h3 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .comments-content {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .modal-actions {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .modal-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-nav-btn {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-nav-btn:hover {
+            background: #ecf0f1;
+        }
+
+        .modal-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .jira-link {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .jira-link:hover {
+            background: #2980b9;
+            color: white;
+        }
+
         .results-container {
             background: white;
             border-radius: 8px;
@@ -327,11 +567,15 @@
         </div>
 
         <div class="search-container">
-            <input type="text" 
-                   id="searchBox" 
-                   class="search-box" 
-                   placeholder="Search issues... (try team names like 'ACS', work types like 'Quality', or any text)"
-                   autocomplete="off">
+            <div class="suggestions-container">
+                <input type="text" 
+                       id="searchBox" 
+                       class="search-box" 
+                       placeholder="Search issues... (try team names like 'ACS', work types like 'Quality', or any text)"
+                       autocomplete="off">
+                
+                <div id="suggestionsDropdown" class="suggestions-dropdown"></div>
+            </div>
             
             <div id="searchHelp" class="search-help" style="display: none;">
                 <div class="search-examples">
@@ -386,10 +630,49 @@
         </div>
     </div>
 
+    <!-- Issue Detail Modal -->
+    <div id="issueModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Loading...</h2>
+                <button class="modal-close" onclick="closeIssueModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="modalLoading" class="loading">🔍 Loading issue details...</div>
+                <div id="modalContent" style="display: none;">
+                    <div class="issue-meta" id="issueMeta"></div>
+                    
+                    <div class="issue-description">
+                        <h3>📝 Description</h3>
+                        <div id="issueDescription" class="issue-description-content">No description</div>
+                    </div>
+                    
+                    <div class="issue-comments">
+                        <h3>💬 Comments</h3>
+                        <div id="issueComments" class="comments-content">No comments</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <div class="modal-nav">
+                    <button id="prevIssueBtn" class="modal-nav-btn" onclick="navigateIssue(-1)">⬅️ Previous</button>
+                    <button id="nextIssueBtn" class="modal-nav-btn" onclick="navigateIssue(1)">Next ➡️</button>
+                </div>
+                <a id="jiraLink" class="jira-link" href="#" target="_blank">🔗 Open in Jira</a>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentMode = 'natural';
         let searchTimeout = null;
         let validationTimeout = null;
+        let suggestTimeout = null;
+        let currentSuggestionIndex = -1;
+        let currentSearchResults = [];
+        let currentIssueIndex = -1;
 
         // Initialize event listeners
         document.addEventListener('DOMContentLoaded', function() {
@@ -397,22 +680,73 @@
             const modeButtons = document.querySelectorAll('.search-mode');
             const searchHelp = document.getElementById('searchHelp');
             
-            // Search input handling
+            // Search input handling with type-ahead
             searchBox.addEventListener('input', function() {
                 clearTimeout(searchTimeout);
                 clearTimeout(validationTimeout);
+                clearTimeout(suggestTimeout);
                 const query = this.value.trim();
                 
                 if (query.length >= 2) {
+                    // Show type-ahead suggestions
+                    suggestTimeout = setTimeout(() => showSuggestions(query), 150);
+                    
                     // Validate JQL/Regex queries
                     if (currentMode === 'jql' || currentMode === 'regex') {
                         validationTimeout = setTimeout(() => validateQuery(query), 500);
                     }
                     
+                    // Perform search
                     searchTimeout = setTimeout(() => performSearch(query), 300);
                 } else {
                     hideResults();
                     hideValidation();
+                    hideSuggestions();
+                }
+            });
+
+            // Keyboard navigation
+            searchBox.addEventListener('keydown', function(e) {
+                const dropdown = document.getElementById('suggestionsDropdown');
+                const suggestions = dropdown.querySelectorAll('.suggestion-item');
+                
+                if (e.key === 'ArrowDown' && suggestions.length > 0) {
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+                    highlightSuggestion(suggestions);
+                } else if (e.key === 'ArrowUp' && suggestions.length > 0) {
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+                    highlightSuggestion(suggestions);
+                } else if (e.key === 'Enter' && currentSuggestionIndex >= 0 && suggestions.length > 0) {
+                    e.preventDefault();
+                    selectSuggestion(suggestions[currentSuggestionIndex]);
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                    currentSuggestionIndex = -1;
+                }
+            });
+
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+K to focus search
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    searchBox.focus();
+                    searchBox.select();
+                }
+                
+                // Escape to close modal
+                if (e.key === 'Escape') {
+                    closeIssueModal();
+                    hideSuggestions();
+                }
+            });
+
+            // Click outside to hide suggestions
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.suggestions-container')) {
+                    hideSuggestions();
                 }
             });
 
@@ -520,6 +854,230 @@
             validationDiv.style.display = 'none';
         }
 
+        // Type-ahead suggestions functionality
+        async function showSuggestions(query) {
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    q: query,
+                    mode: currentMode,
+                    limit: 8
+                });
+
+                const response = await fetch(`/api/suggest?${params}`);
+                const data = await response.json();
+
+                displaySuggestions(data.suggestions);
+
+            } catch (error) {
+                console.error('Suggestions error:', error);
+                hideSuggestions();
+            }
+        }
+
+        function displaySuggestions(suggestions) {
+            const dropdown = document.getElementById('suggestionsDropdown');
+            
+            if (!suggestions || suggestions.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            dropdown.innerHTML = suggestions.map((suggestion, index) => `
+                <div class="suggestion-item" data-value="${escapeHtml(suggestion.value)}" data-index="${index}">
+                    <span class="suggestion-icon">${suggestion.icon}</span>
+                    <span class="suggestion-label">${escapeHtml(suggestion.label)}</span>
+                    <span class="suggestion-type">${suggestion.type.replace('_', ' ')}</span>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => selectSuggestion(item));
+            });
+
+            dropdown.style.display = 'block';
+            currentSuggestionIndex = -1;
+        }
+
+        function hideSuggestions() {
+            const dropdown = document.getElementById('suggestionsDropdown');
+            dropdown.style.display = 'none';
+            currentSuggestionIndex = -1;
+        }
+
+        function highlightSuggestion(suggestions) {
+            suggestions.forEach((item, index) => {
+                if (index === currentSuggestionIndex) {
+                    item.classList.add('highlighted');
+                } else {
+                    item.classList.remove('highlighted');
+                }
+            });
+        }
+
+        function selectSuggestion(suggestionElement) {
+            const value = suggestionElement.dataset.value;
+            const searchBox = document.getElementById('searchBox');
+            
+            searchBox.value = value;
+            hideSuggestions();
+            performSearch(value);
+        }
+
+        // Issue modal functionality
+        async function openIssueModal(issueKey, issueIndex = -1) {
+            const modal = document.getElementById('issueModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalLoading = document.getElementById('modalLoading');
+            const modalContent = document.getElementById('modalContent');
+            
+            // Store current issue index for navigation
+            currentIssueIndex = issueIndex;
+            updateModalNavigation();
+            
+            // Show modal with loading state
+            modal.style.display = 'flex';
+            modalTitle.textContent = issueKey;
+            modalLoading.style.display = 'block';
+            modalContent.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/issues/${issueKey}`);
+                const issue = await response.json();
+                
+                if (response.ok) {
+                    displayIssueDetails(issue);
+                } else {
+                    showModalError(issue.error || 'Failed to load issue');
+                }
+                
+            } catch (error) {
+                console.error('Issue detail error:', error);
+                showModalError('Network error occurred');
+            }
+        }
+
+        function displayIssueDetails(issue) {
+            const modalTitle = document.getElementById('modalTitle');
+            const modalLoading = document.getElementById('modalLoading');
+            const modalContent = document.getElementById('modalContent');
+            const issueMeta = document.getElementById('issueMeta');
+            const issueDescription = document.getElementById('issueDescription');
+            const issueComments = document.getElementById('issueComments');
+            const jiraLink = document.getElementById('jiraLink');
+            
+            // Update title
+            modalTitle.textContent = `${issue.key} - ${issue.summary}`;
+            
+            // Update metadata
+            issueMeta.innerHTML = `
+                <div class="meta-item">
+                    <div class="meta-label">Status</div>
+                    <div class="meta-value">
+                        <span class="status-badge ${getStatusClass(issue.status.name)}">${issue.status.name}</span>
+                    </div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Priority</div>
+                    <div class="meta-value">
+                        <span class="priority-badge ${getPriorityClass(issue.priority.name)}">${issue.priority.name || 'None'}</span>
+                    </div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Assignee</div>
+                    <div class="meta-value">${issue.assignee.display_name || 'Unassigned'}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Reporter</div>
+                    <div class="meta-value">${issue.reporter.display_name || 'Unknown'}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Created</div>
+                    <div class="meta-value">${formatDate(issue.created)}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Updated</div>
+                    <div class="meta-value">${formatDate(issue.updated)}</div>
+                </div>
+                ${issue.custom_fields.team ? `
+                    <div class="meta-item">
+                        <div class="meta-label">Team</div>
+                        <div class="meta-value">👥 ${issue.custom_fields.team}</div>
+                    </div>
+                ` : ''}
+                ${issue.custom_fields.work_type ? `
+                    <div class="meta-item">
+                        <div class="meta-label">Work Type</div>
+                        <div class="meta-value">🔧 ${issue.custom_fields.work_type}</div>
+                    </div>
+                ` : ''}
+                ${issue.custom_fields.px_impact_score ? `
+                    <div class="meta-item">
+                        <div class="meta-label">PX Impact Score</div>
+                        <div class="meta-value">📊 ${issue.custom_fields.px_impact_score}</div>
+                    </div>
+                ` : ''}
+            `;
+            
+            // Update description
+            issueDescription.textContent = issue.description || 'No description provided';
+            
+            // Update comments
+            if (issue.comments && issue.comments.trim()) {
+                issueComments.textContent = issue.comments;
+            } else {
+                issueComments.textContent = 'No comments yet';
+            }
+            
+            // Update Jira link
+            jiraLink.href = issue.jira_url;
+            
+            // Show content
+            modalLoading.style.display = 'none';
+            modalContent.style.display = 'block';
+        }
+
+        function showModalError(message) {
+            const modalLoading = document.getElementById('modalLoading');
+            modalLoading.innerHTML = `<div class="error">❌ ${escapeHtml(message)}</div>`;
+        }
+
+        function closeIssueModal() {
+            const modal = document.getElementById('issueModal');
+            modal.style.display = 'none';
+            currentIssueIndex = -1;
+        }
+
+        function navigateIssue(direction) {
+            if (currentSearchResults.length === 0) return;
+            
+            const newIndex = currentIssueIndex + direction;
+            if (newIndex >= 0 && newIndex < currentSearchResults.length) {
+                const issue = currentSearchResults[newIndex];
+                openIssueModal(issue.key, newIndex);
+            }
+        }
+
+        function updateModalNavigation() {
+            const prevBtn = document.getElementById('prevIssueBtn');
+            const nextBtn = document.getElementById('nextIssueBtn');
+            
+            prevBtn.disabled = currentIssueIndex <= 0;
+            nextBtn.disabled = currentIssueIndex >= currentSearchResults.length - 1;
+        }
+
+        // Update openIssue function to use modal
+        function openIssue(issueKey) {
+            // Find issue index in current results for navigation
+            const issueIndex = currentSearchResults.findIndex(r => r.key === issueKey);
+            openIssueModal(issueKey, issueIndex);
+        }
+
         async function performSearch(query) {
             const startTime = Date.now();
             
@@ -553,6 +1111,9 @@
             const list = document.getElementById('resultsList');
             const noResults = document.getElementById('noResults');
             
+            // Store results for modal navigation
+            currentSearchResults = data.results;
+            
             if (data.results.length === 0) {
                 container.style.display = 'none';
                 noResults.style.display = 'block';
@@ -563,9 +1124,9 @@
             container.style.display = 'block';
             
             // Update results info
-            info.innerHTML = `Found ${data.total} results for "${query}" in ${data.query_time_ms}ms`;
+            info.innerHTML = `Found ${data.total} results for "<mark>${escapeHtml(query)}</mark>" in ${data.query_time_ms}ms`;
             
-            // Generate results HTML
+            // Generate results HTML with highlighting
             list.innerHTML = data.results.map(result => `
                 <div class="result-item" onclick="openIssue('${result.key}')">
                     <div class="result-key">${result.key}</div>
@@ -615,11 +1176,6 @@
             return fields.length > 0 ? `<div class="custom-fields">${fields.join('')}</div>` : '';
         }
 
-        function openIssue(issueKey) {
-            // For now, open the issue in Jira
-            // TODO: Implement issue preview modal in Phase 5
-            window.open(`https://issues.redhat.com/browse/${issueKey}`, '_blank');
-        }
 
         function getStatusClass(status) {
             if (!status) return 'default';

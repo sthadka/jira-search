@@ -2,12 +2,202 @@
 
 import time
 import logging
+import sqlite3
+from typing import List, Dict, Any
 from flask import Flask, render_template, request, jsonify
 from jira_search.config import Config
 from jira_search.database import Database, DatabaseError
 from jira_search.search import AdvancedSearch, SearchError, JQLError, RegexError
 
 logger = logging.getLogger(__name__)
+
+
+def _get_issue_key_suggestions(db: Database, query: str, limit: int = 3) -> List[Dict[str, Any]]:
+    """Get suggestions for issue keys matching the query."""
+    try:
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.execute("""
+                SELECT key, summary FROM issues 
+                WHERE key LIKE ? 
+                ORDER BY updated DESC 
+                LIMIT ?
+            """, (f'{query.upper()}%', limit))
+            
+            return [
+                {
+                    'type': 'issue_key',
+                    'value': row[0],
+                    'label': f"{row[0]} - {row[1][:60]}{'...' if len(row[1]) > 60 else ''}",
+                    'icon': '🎫'
+                }
+                for row in cursor.fetchall()
+            ]
+    except Exception:
+        return []
+
+
+def _get_assignee_suggestions(db: Database, query: str, limit: int = 2) -> List[Dict[str, Any]]:
+    """Get suggestions for assignees matching the query."""
+    try:
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.execute("""
+                SELECT DISTINCT assignee_display_name, COUNT(*) as issue_count
+                FROM issues 
+                WHERE assignee_display_name LIKE ? AND assignee_display_name IS NOT NULL
+                GROUP BY assignee_display_name
+                ORDER BY issue_count DESC
+                LIMIT ?
+            """, (f'%{query}%', limit))
+            
+            return [
+                {
+                    'type': 'assignee',
+                    'value': row[0],
+                    'label': f"👤 {row[0]} ({row[1]} issues)",
+                    'icon': '👤'
+                }
+                for row in cursor.fetchall()
+            ]
+    except Exception:
+        return []
+
+
+def _get_team_suggestions(db: Database, query: str, limit: int = 2) -> List[Dict[str, Any]]:
+    """Get suggestions for teams matching the query."""
+    try:
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.execute("""
+                SELECT DISTINCT custom_12313240, COUNT(*) as issue_count
+                FROM issues 
+                WHERE custom_12313240 LIKE ? AND custom_12313240 IS NOT NULL
+                GROUP BY custom_12313240
+                ORDER BY issue_count DESC
+                LIMIT ?
+            """, (f'%{query}%', limit))
+            
+            return [
+                {
+                    'type': 'team',
+                    'value': row[0],
+                    'label': f"👥 {row[0]} ({row[1]} issues)",
+                    'icon': '👥'
+                }
+                for row in cursor.fetchall()
+            ]
+    except Exception:
+        return []
+
+
+def _get_summary_suggestions(db: Database, query: str, limit: int = 3) -> List[Dict[str, Any]]:
+    """Get suggestions from issue summaries matching the query."""
+    try:
+        results, _ = db.search_issues(query, limit=limit)
+        return [
+            {
+                'type': 'summary',
+                'value': result['key'],
+                'label': f"📄 {result['key']}: {result['summary'][:60]}{'...' if len(result['summary']) > 60 else ''}",
+                'icon': '📄'
+            }
+            for result in results
+        ]
+    except Exception:
+        return []
+
+
+def _get_jql_suggestions(db: Database, query: str, limit: int = 8) -> List[Dict[str, Any]]:
+    """Get JQL-specific suggestions."""
+    suggestions = []
+    query_lower = query.lower()
+    
+    # Field suggestions
+    jql_fields = [
+        ('project', '📁', 'Project key'),
+        ('assignee', '👤', 'Assignee name'),
+        ('status', '🏷️', 'Issue status'),
+        ('priority', '⚡', 'Issue priority'),
+        ('team', '👥', 'Team name'),
+        ('work_type', '🔧', 'Work type'),
+        ('created', '📅', 'Created date'),
+        ('updated', '📅', 'Updated date')
+    ]
+    
+    for field, icon, description in jql_fields:
+        if field.startswith(query_lower) or query_lower in field:
+            suggestions.append({
+                'type': 'jql_field',
+                'value': f'{field} = ',
+                'label': f'{icon} {field} = (${description})',
+                'icon': icon
+            })
+    
+    # Common JQL patterns
+    if 'project' in query_lower:
+        suggestions.append({
+            'type': 'jql_example',
+            'value': 'project = ROX',
+            'label': '📁 project = ROX',
+            'icon': '📁'
+        })
+    
+    if 'team' in query_lower:
+        # Get actual team names
+        try:
+            with sqlite3.connect(db.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT DISTINCT custom_12313240 
+                    FROM issues 
+                    WHERE custom_12313240 IS NOT NULL 
+                    LIMIT 3
+                """)
+                for row in cursor.fetchall():
+                    suggestions.append({
+                        'type': 'jql_value',
+                        'value': f'team = "{row[0]}"',
+                        'label': f'👥 team = "{row[0]}"',
+                        'icon': '👥'
+                    })
+        except Exception:
+            pass
+    
+    return suggestions[:limit]
+
+
+def _get_regex_suggestions(db: Database, query: str, limit: int = 8) -> List[Dict[str, Any]]:
+    """Get regex pattern suggestions."""
+    suggestions = []
+    
+    # Common regex patterns
+    patterns = [
+        ('ROX-\\d+', '🎫', 'Match any ROX issue number'),
+        ('ROX-\\d{5}', '🎫', 'Match 5-digit ROX issues'),
+        ('(bug|fix)', '🐛', 'Match bug or fix keywords'),
+        ('^Fix.*', '🔧', 'Issues starting with "Fix"'),
+        ('(critical|blocker)', '🚨', 'High priority issues'),
+        ('automation', '🤖', 'Automation-related issues')
+    ]
+    
+    query_lower = query.lower()
+    for pattern, icon, description in patterns:
+        if query in pattern or any(word in pattern.lower() for word in query_lower.split()):
+            suggestions.append({
+                'type': 'regex_pattern',
+                'value': pattern,
+                'label': f'{icon} {pattern} - {description}',
+                'icon': icon
+            })
+    
+    # If query looks like start of a pattern, suggest completions
+    if query.startswith('ROX'):
+        if '\\d' not in query:
+            suggestions.append({
+                'type': 'regex_completion',
+                'value': 'ROX-\\d+',
+                'label': '🎫 ROX-\\d+ - Match any ROX issue',
+                'icon': '🎫'
+            })
+    
+    return suggestions[:limit]
 
 
 def create_app(config: Config) -> Flask:
@@ -138,30 +328,49 @@ def create_app(config: Config) -> Flask:
         
         Query parameters:
         - q: Partial query (required)
-        - limit: Maximum suggestions (default: 10)
+        - mode: Search mode (default: 'natural')
+        - limit: Maximum suggestions (default: 8)
         
         Returns:
-        JSON response with suggestions
+        JSON response with intelligent suggestions
         """
         query = request.args.get('q', '').strip()
-        limit = int(request.args.get('limit', 10))
+        mode = request.args.get('mode', 'natural')
+        limit = int(request.args.get('limit', 8))
         
         if not query or len(query) < 2:
             return jsonify({'suggestions': []})
         
         try:
-            # For now, return top search results as suggestions
-            # TODO: Implement proper type-ahead suggestions in Phase 5
-            results, _ = db.search_issues(query, limit=limit)
-            suggestions = [
-                {
-                    'key': result['key'],
-                    'summary': result['summary'][:100] + '...' if len(result['summary']) > 100 else result['summary']
-                }
-                for result in results
-            ]
+            suggestions = []
             
-            return jsonify({'suggestions': suggestions})
+            if mode == 'natural':
+                # For natural language, provide mixed suggestions
+                suggestions.extend(_get_issue_key_suggestions(db, query, limit=3))
+                suggestions.extend(_get_assignee_suggestions(db, query, limit=2))
+                suggestions.extend(_get_team_suggestions(db, query, limit=2))
+                suggestions.extend(_get_summary_suggestions(db, query, limit=3))
+            
+            elif mode == 'jql':
+                # For JQL mode, provide field and value suggestions
+                suggestions.extend(_get_jql_suggestions(db, query, limit=limit))
+            
+            elif mode == 'regex':
+                # For regex mode, provide pattern suggestions and matches
+                suggestions.extend(_get_regex_suggestions(db, query, limit=limit))
+            
+            # Remove duplicates and limit results
+            unique_suggestions = []
+            seen = set()
+            for sugg in suggestions:
+                key = (sugg.get('type'), sugg.get('value'))
+                if key not in seen:
+                    seen.add(key)
+                    unique_suggestions.append(sugg)
+                if len(unique_suggestions) >= limit:
+                    break
+            
+            return jsonify({'suggestions': unique_suggestions})
             
         except Exception as e:
             logger.error(f"Suggestion error: {e}")
