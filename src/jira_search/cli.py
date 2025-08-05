@@ -149,27 +149,44 @@ def sync(ctx, project: Optional[str], jql: Optional[str], incremental: bool, ful
         # Load config
         config = load_config(config_path)
         
-        # Determine sync query
+        # Initialize database
+        db = Database(config)
+        db.initialize()
+        
+        # Determine base sync query
         if jql:
-            sync_jql = jql
+            base_sync_jql = jql
         elif project:
-            sync_jql = f"project = {project}"
+            base_sync_jql = f"project = {project}"
         elif config.sync_jql:
-            sync_jql = config.sync_jql
+            base_sync_jql = config.sync_jql
         elif config.sync_project_key:
-            sync_jql = f"project = {config.sync_project_key}"
+            base_sync_jql = f"project = {config.sync_project_key}"
         else:
             click.echo("Error: No sync query specified. Use --project, --jql, or configure in config.yaml", err=True)
             sys.exit(1)
+        
+        # Handle incremental sync
+        sync_jql = base_sync_jql
+        if incremental and not full:
+            last_sync_time = db.get_last_sync_time()
+            if last_sync_time:
+                # Convert ISO timestamp to JQL-compatible format (remove microseconds)
+                from datetime import datetime
+                dt = datetime.fromisoformat(last_sync_time.replace('Z', '+00:00'))
+                jql_timestamp = dt.strftime('%Y-%m-%d %H:%M')
+                
+                # Add incremental filter to JQL
+                sync_jql = f"({base_sync_jql}) AND updated >= '{jql_timestamp}'"
+                click.echo(f"Incremental sync from: {jql_timestamp}")
+            else:
+                click.echo("No previous sync found, performing full sync")
+                incremental = False
         
         click.echo(f"Sync query: {sync_jql}")
         
         if dry_run:
             click.echo("DRY RUN - No changes will be made")
-        
-        # Initialize database
-        db = Database(config)
-        db.initialize()
         
         if full and not dry_run:
             click.echo("Performing full re-sync (clearing existing data)")
@@ -199,17 +216,30 @@ def sync(ctx, project: Optional[str], jql: Optional[str], incremental: bool, ful
             click.echo(f"Would sync {total_issues} issues")
             return
         
+        # Get total count for progress tracking
+        click.echo("Counting issues to sync...")
+        count_result = client.search_issues(sync_jql, max_results=0)
+        total_issues = count_result.get('total', 0)
+        
+        if total_issues == 0:
+            click.echo("No issues found matching the sync query")
+            return
+        
         # Perform actual sync
-        click.echo("Starting sync...")
+        click.echo(f"Starting sync of {total_issues} issues...")
         synced_count = 0
         
-        with click.progressbar(length=None, label='Syncing issues') as bar:
+        with click.progressbar(length=total_issues, label='Syncing issues') as bar:
             for issue in client.search_issues_paginated(sync_jql):
-                db.upsert_issue(issue)
-                synced_count += 1
-                bar.update(1)
+                try:
+                    db.upsert_issue(issue)
+                    synced_count += 1
+                    bar.update(1)
+                except Exception as e:
+                    logger.warning(f"Failed to sync issue {issue.get('key', 'unknown')}: {e}")
+                    bar.update(1)  # Still update progress even on error
         
-        click.echo(f"✓ Sync completed: {synced_count} issues processed")
+        click.echo(f"✓ Sync completed: {synced_count}/{total_issues} issues processed")
         
         # Update last sync timestamp
         db.update_sync_metadata(sync_jql)

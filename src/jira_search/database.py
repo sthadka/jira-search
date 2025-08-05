@@ -399,6 +399,23 @@ class Database:
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to update sync metadata: {e}")
     
+    def get_last_sync_time(self) -> Optional[str]:
+        """Get the last sync timestamp for incremental sync.
+        
+        Returns:
+            ISO formatted timestamp string or None if never synced
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT last_sync_time FROM sync_metadata WHERE id = 1
+                """)
+                result = cursor.fetchone()
+                return result[0] if result and result[0] else None
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to get last sync time: {e}")
+    
     def get_statistics(self) -> Dict[str, Any]:
         """Get database statistics and sync information.
         
