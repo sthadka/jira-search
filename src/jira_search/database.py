@@ -134,35 +134,46 @@ class Database:
         
         conn.execute(sql)
         
-        # Create triggers to keep FTS table in sync
-        conn.execute("""
+        # Create triggers to keep FTS table in sync with custom fields
+        # Build column lists for triggers
+        base_columns = ['rowid', 'key', 'summary', 'description', 'comments', 
+                       'assignee_display_name', 'reporter_display_name', 'project_name']
+        base_columns.extend(custom_field_columns)
+        
+        insert_columns = ', '.join(base_columns)
+        
+        new_values = []
+        old_values = []
+        for col in base_columns:
+            new_values.append(f'new.{col}')
+            old_values.append(f'old.{col}')
+        
+        insert_values = ', '.join(new_values)
+        delete_values = ', '.join(old_values)
+        
+        # INSERT trigger
+        conn.execute(f"""
             CREATE TRIGGER IF NOT EXISTS issues_fts_insert AFTER INSERT ON issues BEGIN
-                INSERT INTO issues_fts(rowid, key, summary, description, comments, 
-                                     assignee_display_name, reporter_display_name, project_name)
-                VALUES (new.rowid, new.key, new.summary, new.description, new.comments,
-                       new.assignee_display_name, new.reporter_display_name, new.project_name);
+                INSERT INTO issues_fts({insert_columns})
+                VALUES ({insert_values});
             END
         """)
         
-        conn.execute("""
+        # DELETE trigger
+        conn.execute(f"""
             CREATE TRIGGER IF NOT EXISTS issues_fts_delete AFTER DELETE ON issues BEGIN
-                INSERT INTO issues_fts(issues_fts, rowid, key, summary, description, comments,
-                                     assignee_display_name, reporter_display_name, project_name)
-                VALUES ('delete', old.rowid, old.key, old.summary, old.description, old.comments,
-                       old.assignee_display_name, old.reporter_display_name, old.project_name);
+                INSERT INTO issues_fts(issues_fts, {insert_columns})
+                VALUES ('delete', {delete_values});
             END
         """)
         
-        conn.execute("""
+        # UPDATE trigger
+        conn.execute(f"""
             CREATE TRIGGER IF NOT EXISTS issues_fts_update AFTER UPDATE ON issues BEGIN
-                INSERT INTO issues_fts(issues_fts, rowid, key, summary, description, comments,
-                                     assignee_display_name, reporter_display_name, project_name)
-                VALUES ('delete', old.rowid, old.key, old.summary, old.description, old.comments,
-                       old.assignee_display_name, old.reporter_display_name, old.project_name);
-                INSERT INTO issues_fts(rowid, key, summary, description, comments,
-                                     assignee_display_name, reporter_display_name, project_name)
-                VALUES (new.rowid, new.key, new.summary, new.description, new.comments,
-                       new.assignee_display_name, new.reporter_display_name, new.project_name);
+                INSERT INTO issues_fts(issues_fts, {insert_columns})
+                VALUES ('delete', {delete_values});
+                INSERT INTO issues_fts({insert_columns})
+                VALUES ({insert_values});
             END
         """)
     
