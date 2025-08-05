@@ -1,0 +1,49 @@
+# Jira Search Mirror Configuration
+# Copy this file to config.yaml and fill in your details
+
+jira:
+  # Your Jira Data Center URL (without trailing slash)
+  url: "https://your-jira.company.com"
+  
+  # Your Jira username
+  username: "your-username"
+  
+  # Personal Access Token for authentication
+  # Generate this in Jira: Profile > Personal Access Tokens
+  pat: "your-personal-access-token"
+
+sync:
+  # Project key to sync (e.g., "PROJ") - leave empty to use JQL instead
+  project_key: ""
+  
+  # Alternative: Use JQL query for more specific syncing
+  # If both project_key and jql are specified, jql takes precedence
+  jql: "project = PROJ AND created >= -30d"
+  
+  # API rate limiting (requests per minute)
+  rate_limit: 100
+  
+  # Number of issues to fetch per API call
+  batch_size: 100
+
+# Custom fields to include in sync and search
+# Find field IDs in Jira: Admin > Issues > Custom Fields
+custom_fields:
+  - id: "customfield_10001"
+    name: "Story Points"
+    type: "number"
+  - id: "customfield_10002"
+    name: "Epic Link"
+    type: "text"
+
+search:
+  # Maximum number of search results to return
+  max_results: 1000
+  
+  # Search timeout in seconds (applies to regex queries)
+  timeout_seconds: 5
+
+# Database configuration
+database:
+  # Path to SQLite database file
+  path: "jira_search.db"
