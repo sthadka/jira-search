@@ -269,6 +269,7 @@ def create_app(config: Config) -> Flask:
                 formatted_result = {
                     'key': result['key'],
                     'summary': result['summary'],
+                    'description': result.get('description', ''),
                     'status_name': result['status_name'],
                     'priority_name': result['priority_name'],
                     'assignee_display_name': result['assignee_display_name'],
@@ -278,6 +279,8 @@ def create_app(config: Config) -> Flask:
                     'project_key': result['project_key'],
                     'project_name': result['project_name'],
                     'issue_type': result['issue_type'],
+                    'labels': result.get('labels', ''),
+                    'components': result.get('components', ''),
                     'custom_fields': {
                         'px_impact_score': result.get('custom_12322244'),
                         'product_manager': result.get('custom_12316752'),
@@ -427,6 +430,8 @@ def create_app(config: Config) -> Flask:
                     'created': issue_dict['created'],
                     'updated': issue_dict['updated'],
                     'comments': issue_dict['comments'],
+                    'labels': issue_dict.get('labels', ''),
+                    'components': issue_dict.get('components', ''),
                     'project': {
                         'key': issue_dict['project_key'],
                         'name': issue_dict['project_name']

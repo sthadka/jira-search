@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:ital,wght@0,300..700;1,300..700&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -131,16 +132,35 @@
             </div>
         </div>
 
-        <div id="resultsContainer" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hidden">
-            <div class="p-5 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-medium">
-                <div id="resultsInfo" class="text-sm text-gray-600 dark:text-gray-400 mb-2"></div>
-            </div>
-            <div id="resultsList" class="space-y-0"></div>
-        </div>
+        <!-- Google-style search results layout -->
+        <div id="searchResultsLayout" class="flex gap-6 hidden">
+            <!-- Left column - Search Results -->
+            <div class="flex-1 min-w-0">
+                <div id="resultsContainer" class="hidden">
+                    <div class="mb-4">
+                        <div id="resultsInfo" class="text-sm text-gray-600 dark:text-gray-400"></div>
+                    </div>
+                    <div id="resultsList" class="space-y-4"></div>
+                </div>
 
-        <div id="noResults" class="text-center p-10 text-gray-500 dark:text-gray-400 hidden">
-            <h3 class="text-lg mb-2">No issues found</h3>
-            <p>Try a different search query or check your spelling.</p>
+                <div id="noResults" class="text-center p-10 text-gray-500 dark:text-gray-400 hidden">
+                    <h3 class="text-lg mb-2">No issues found</h3>
+                    <p>Try a different search query or check your spelling.</p>
+                </div>
+            </div>
+
+            <!-- Right column - Issue Detail Panel -->
+            <div class="w-96 flex-shrink-0">
+                <div id="issueDetailPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 id="panelTitle" class="text-lg font-medium text-gray-900 dark:text-gray-100 flex-1 mr-4">Select an issue to view details</h3>
+                        <button onclick="closeDetailPanel()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
+                    </div>
+                    <div id="panelContent" class="text-gray-600 dark:text-gray-400 text-sm">
+                        Click on any search result to view its details here.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -739,11 +759,195 @@
             nextBtn.disabled = currentIssueIndex >= currentSearchResults.length - 1;
         }
 
-        // Update openIssue function to use modal
+        // Utility functions
+        function createDescriptionSnippet(description, maxLength = 150) {
+            if (!description) return 'No description available';
+            
+            // Strip basic Jira markup for snippet
+            let snippet = description
+                .replace(/\{[^}]+\}/g, '') // Remove Jira macros
+                .replace(/\*([^*]+)\*/g, '$1') // Remove bold
+                .replace(/_([^_]+)_/g, '$1') // Remove italic
+                .replace(/\[([^\]]+)\|[^\]]+\]/g, '$1') // Extract link text
+                .replace(/h\d\.\s?/g, '') // Remove headers
+                .trim();
+            
+            if (snippet.length > maxLength) {
+                snippet = snippet.substring(0, maxLength) + '...';
+            }
+            
+            return snippet || 'No description available';
+        }
+
+        function parseJiraMarkdown(text) {
+            if (!text) return '';
+            
+            // Convert Jira markup to HTML
+            return text
+                .replace(/\*([^*]+)\*/g, '<strong>$1</strong>') // Bold
+                .replace(/_([^_]+)_/g, '<em>$1</em>') // Italic
+                .replace(/\+([^+]+)\+/g, '<u>$1</u>') // Underline
+                .replace(/\-([^-]+)\-/g, '<del>$1</del>') // Strikethrough
+                .replace(/\^([^^]+)\^/g, '<sup>$1</sup>') // Superscript
+                .replace(/~([^~]+)~/g, '<sub>$1</sub>') // Subscript
+                .replace(/{{([^}]+)}}/g, '<code>$1</code>') // Inline code
+                .replace(/\{code(?:[^}]*)?\}([\s\S]*?)\{code\}/g, '<pre><code>$1</code></pre>') // Code blocks
+                .replace(/\{quote\}([\s\S]*?)\{quote\}/g, '<blockquote>$1</blockquote>') // Quotes
+                .replace(/\[([^\]]+)\|([^\]]+)\]/g, '<a href="$2" target="_blank">$1</a>') // Links
+                .replace(/h([1-6])\.\s?(.+)/g, '<h$1>$2</h$1>') // Headers
+                .replace(/^\* (.+)$/gm, '<li>$1</li>') // Bullet points
+                .replace(/^# (.+)$/gm, '<li>$1</li>') // Numbered lists
+                .replace(/\n/g, '<br>'); // Line breaks
+        }
+
+        // Panel management functions
+        function showDetailPanel(issueKey) {
+            const issue = currentSearchResults.find(r => r.key === issueKey);
+            if (!issue) return;
+            
+            const panel = document.getElementById('issueDetailPanel');
+            const title = document.getElementById('panelTitle');
+            const content = document.getElementById('panelContent');
+            
+            title.textContent = `${issue.key} - ${issue.summary}`;
+            content.innerHTML = '<div class="text-center py-4">Loading details...</div>';
+            panel.classList.remove('hidden');
+            
+            // Load full issue details
+            loadIssueDetails(issueKey);
+        }
+
+        function closeDetailPanel() {
+            const panel = document.getElementById('issueDetailPanel');
+            panel.classList.add('hidden');
+        }
+
+        async function loadIssueDetails(issueKey) {
+            try {
+                const response = await fetch(`/api/issues/${issueKey}`);
+                const issue = await response.json();
+                
+                if (response.ok) {
+                    displayIssueInPanel(issue);
+                } else {
+                    displayPanelError(issue.error || 'Failed to load issue');
+                }
+            } catch (error) {
+                console.error('Issue detail error:', error);
+                displayPanelError('Network error occurred');
+            }
+        }
+
+        function displayIssueInPanel(issue) {
+            const content = document.getElementById('panelContent');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Quick Actions -->
+                    <div class="flex gap-2 mb-4">
+                        <a href="${issue.jira_url}" target="_blank" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Open in Jira</a>
+                        <button onclick="openIssueModal('${issue.key}')" class="px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600">Full View</button>
+                    </div>
+                    
+                    <!-- Metadata Grid -->
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Status</div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium status-badge ${getStatusClass(issue.status.name)}">${issue.status.name}</span>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Priority</div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium priority-badge ${getPriorityClass(issue.priority.name)}">${issue.priority.name || 'None'}</span>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Assignee</div>
+                            <div class="text-gray-900 dark:text-gray-100">${issue.assignee.display_name || 'Unassigned'}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Reporter</div>
+                            <div class="text-gray-900 dark:text-gray-100">${issue.reporter.display_name || 'Unknown'}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Updated</div>
+                            <div class="text-gray-900 dark:text-gray-100">${formatDate(issue.updated)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium">Created</div>
+                            <div class="text-gray-900 dark:text-gray-100">${formatDate(issue.created)}</div>
+                        </div>
+                    </div>
+                    
+                    ${issue.labels ? `
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-1">Labels</div>
+                            <div class="flex flex-wrap gap-1">
+                                ${issue.labels.split(', ').filter(l => l.trim()).map(label => 
+                                    `<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">${escapeHtml(label.trim())}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${issue.components ? `
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-1">Components</div>
+                            <div class="flex flex-wrap gap-1">
+                                ${issue.components.split(', ').filter(c => c.trim()).map(component => 
+                                    `<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">${escapeHtml(component.trim())}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Custom Fields -->
+                    ${generateCustomFieldsForPanel(issue.custom_fields)}
+                    
+                    <!-- Description -->
+                    <div>
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-2">Description</div>
+                        <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-3 rounded max-h-40 overflow-y-auto">
+                            ${parseJiraMarkdown(issue.description) || 'No description provided'}
+                        </div>
+                    </div>
+                    
+                    <!-- Comments -->
+                    ${issue.comments && issue.comments.trim() ? `
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-2">Comments</div>
+                            <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-3 rounded max-h-32 overflow-y-auto">
+                                ${parseJiraMarkdown(issue.comments)}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function generateCustomFieldsForPanel(customFields) {
+            if (!customFields) return '';
+            
+            const fields = [];
+            if (customFields.team) {
+                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">Team</div><div class="text-gray-900 dark:text-gray-100">${escapeHtml(customFields.team)}</div>`);
+            }
+            if (customFields.work_type) {
+                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">Work Type</div><div class="text-gray-900 dark:text-gray-100">${escapeHtml(customFields.work_type)}</div>`);
+            }
+            if (customFields.px_impact_score) {
+                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">PX Impact Score</div><div class="text-gray-900 dark:text-gray-100">${customFields.px_impact_score}</div>`);
+            }
+            
+            return fields.length > 0 ? `<div class="grid grid-cols-2 gap-3 text-xs">${fields.join('')}</div>` : '';
+        }
+
+        function displayPanelError(message) {
+            const content = document.getElementById('panelContent');
+            content.innerHTML = `<div class="text-red-500 text-sm">❌ ${escapeHtml(message)}</div>`;
+        }
+
+        // Update openIssue function to use panel
         function openIssue(issueKey) {
-            // Find issue index in current results for navigation
-            const issueIndex = currentSearchResults.findIndex(r => r.key === issueKey);
-            openIssueModal(issueKey, issueIndex);
+            showDetailPanel(issueKey);
         }
 
         async function performSearch(query, updateURL = true) {
@@ -779,6 +983,7 @@
         }
 
         function displayResults(data, query) {
+            const searchLayout = document.getElementById('searchResultsLayout');
             const container = document.getElementById('resultsContainer');
             const info = document.getElementById('resultsInfo');
             const list = document.getElementById('resultsList');
@@ -786,6 +991,9 @@
             
             // Store results for modal navigation
             currentSearchResults = data.results;
+            
+            // Show the search results layout
+            searchLayout.classList.remove('hidden');
             
             if (data.results.length === 0) {
                 container.classList.add('hidden');
@@ -797,52 +1005,86 @@
             container.classList.remove('hidden');
             
             // Update results info
-            info.innerHTML = `Found ${data.total} results for "<mark>${escapeHtml(query)}</mark>" in ${data.query_time_ms}ms`;
+            info.innerHTML = `About ${data.total} results for "<strong>${escapeHtml(query)}</strong>" (${data.query_time_ms}ms)`;
             
-            // Generate results HTML with highlighting and checkboxes
+            // Generate Google-style results HTML
             list.innerHTML = data.results.map(result => `
-                <div class="relative p-5 border-b border-gray-200 dark:border-gray-600 transition-colors duration-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${selectedIssues.has(result.key) ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}" data-issue-key="${result.key}">
-                    <div class="absolute top-4 left-4 z-10">
+                <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-4 last:border-b-0 ${selectedIssues.has(result.key) ? 'bg-blue-50 dark:bg-blue-900/10 p-3 rounded' : ''}" data-issue-key="${result.key}">
+                    <div class="flex items-start gap-3">
                         <input type="checkbox" 
                                ${selectedIssues.has(result.key) ? 'checked' : ''}
                                onchange="toggleIssueSelection('${result.key}')"
                                onclick="event.stopPropagation()"
-                               class="w-4 h-4 cursor-pointer accent-blue-500 opacity-60 hover:opacity-100 transition-opacity duration-200 ${selectedIssues.has(result.key) ? 'opacity-100' : ''}">
-                    </div>
-                    <div class="flex-1 cursor-pointer pl-8" onclick="openIssue('${result.key}')">
-                        <div class="font-semibold text-blue-500 dark:text-blue-400 mb-1 text-sm">${result.key}</div>
-                        <div class="text-base mb-2 leading-snug text-gray-900 dark:text-gray-100">${escapeHtml(result.summary)}</div>
-                        <div class="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
-                            <div class="flex items-center gap-1">
-                                <span class="px-2 py-0.5 rounded-full text-xs font-medium uppercase status-badge ${getStatusClass(result.status_name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer" 
+                               class="mt-1 w-4 h-4 cursor-pointer accent-blue-500 opacity-60 hover:opacity-100 transition-opacity duration-200 ${selectedIssues.has(result.key) ? 'opacity-100' : ''}">
+                        
+                        <div class="flex-1 cursor-pointer" onclick="openIssue('${result.key}')">
+                            <!-- Title and URL-like line -->
+                            <div class="mb-1">
+                                <div class="text-blue-600 dark:text-blue-400 hover:underline text-lg font-medium">${escapeHtml(result.summary)}</div>
+                                <div class="text-green-600 dark:text-green-400 text-sm">${result.key} • ${result.project_key}</div>
+                            </div>
+                            
+                            <!-- Description snippet -->
+                            <div class="text-gray-600 dark:text-gray-400 text-sm mb-2 leading-relaxed">
+                                ${createDescriptionSnippet(result.description)}
+                            </div>
+                            
+                            <!-- Metadata tags -->
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <span class="px-2 py-1 rounded-full status-badge ${getStatusClass(result.status_name)} hover:shadow-sm transition-all duration-200 cursor-pointer" 
                                       onclick="searchByField('status', '${result.status_name}'); event.stopPropagation();"
                                       title="Click to filter by status: ${result.status_name}">${result.status_name || 'Unknown'}</span>
-                            </div>
-                            ${result.priority_name ? `
-                                <div class="flex items-center gap-1">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium priority-badge ${getPriorityClass(result.priority_name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                                
+                                ${result.priority_name ? `
+                                    <span class="px-2 py-1 rounded-full priority-badge ${getPriorityClass(result.priority_name)} hover:shadow-sm transition-all duration-200 cursor-pointer"
                                           onclick="searchByField('priority', '${result.priority_name}'); event.stopPropagation();"
                                           title="Click to filter by priority: ${result.priority_name}">${result.priority_name}</span>
-                                </div>
-                            ` : ''}
-                            ${result.assignee_display_name ? `
-                                <div class="flex items-center gap-1">
-                                    👤 <span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer" 
-                                             onclick="searchByField('assignee', '${escapeHtml(result.assignee_display_name)}'); event.stopPropagation();"
-                                             title="Click to filter by assignee: ${escapeHtml(result.assignee_display_name)}">${escapeHtml(result.assignee_display_name)}</span>
-                                </div>
-                            ` : ''}
-                            <div class="flex items-center gap-1">
-                                📅 ${formatDate(result.updated)}
-                            </div>
-                            <div class="flex items-center gap-1">
-                                📁 ${result.project_key}
+                                ` : ''}
+                                
+                                ${result.assignee_display_name ? `
+                                    <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-blue-500 hover:text-white transition-all duration-200 cursor-pointer" 
+                                          onclick="searchByField('assignee', '${escapeHtml(result.assignee_display_name)}'); event.stopPropagation();"
+                                          title="Click to filter by assignee: ${escapeHtml(result.assignee_display_name)}">👤 ${escapeHtml(result.assignee_display_name)}</span>
+                                ` : ''}
+                                
+                                ${result.labels ? result.labels.split(', ').filter(l => l.trim()).slice(0, 3).map(label => 
+                                    `<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                           onclick="searchByField('labels', '${escapeHtml(label.trim())}'); event.stopPropagation();"
+                                           title="Click to filter by label: ${escapeHtml(label.trim())}">🏷️ ${escapeHtml(label.trim())}</span>`
+                                ).join('') : ''}
+                                
+                                ${result.components ? result.components.split(', ').filter(c => c.trim()).slice(0, 2).map(component => 
+                                    `<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded cursor-pointer hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                           onclick="searchByField('components', '${escapeHtml(component.trim())}'); event.stopPropagation();"
+                                           title="Click to filter by component: ${escapeHtml(component.trim())}">🔧 ${escapeHtml(component.trim())}</span>`
+                                ).join('') : ''}
+                                
+                                ${generateCustomFieldTags(result.custom_fields)}
+                                
+                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">📅 ${formatDate(result.updated)}</span>
                             </div>
                         </div>
-                        ${generateCustomFields(result.custom_fields)}
                     </div>
                 </div>
             `).join('');
+        }
+
+        function generateCustomFieldTags(customFields) {
+            if (!customFields) return '';
+            
+            const tags = [];
+            if (customFields.team) {
+                tags.push(`<span class="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors" 
+                                 onclick="searchByField('team', '${escapeHtml(customFields.team)}'); event.stopPropagation();"
+                                 title="Click to filter by team: ${escapeHtml(customFields.team)}">👥 ${escapeHtml(customFields.team)}</span>`);
+            }
+            if (customFields.work_type) {
+                tags.push(`<span class="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded cursor-pointer hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                                 onclick="searchByField('work_type', '${escapeHtml(customFields.work_type)}'); event.stopPropagation();"
+                                 title="Click to filter by work type: ${escapeHtml(customFields.work_type)}">🔧 ${escapeHtml(customFields.work_type)}</span>`);
+            }
+            
+            return tags.join('');
         }
 
         function generateCustomFields(customFields) {
@@ -927,11 +1169,14 @@
         }
 
         function hideResults() {
+            const searchLayout = document.getElementById('searchResultsLayout');
             const container = document.getElementById('resultsContainer');
             const noResults = document.getElementById('noResults');
             
+            searchLayout.classList.add('hidden');
             container.classList.add('hidden');
             noResults.classList.add('hidden');
+            closeDetailPanel();
         }
 
         // Bulk Selection Functions
@@ -1100,6 +1345,12 @@
                     break;
                 case 'work_type':
                     jqlQuery = `work_type = "${fieldValue}"`;
+                    break;
+                case 'labels':
+                    jqlQuery = `labels = "${fieldValue}"`;
+                    break;
+                case 'components':
+                    jqlQuery = `components = "${fieldValue}"`;
                     break;
                 default:
                     // Fall back to natural language search
