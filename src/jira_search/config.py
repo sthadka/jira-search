@@ -258,7 +258,8 @@ class Config:
         """Get list of core Jira fields to fetch and index."""
         default_fields = [
             'key', 'summary', 'description', 'status', 'priority',
-            'assignee', 'reporter', 'created', 'updated', 'comment', 'labels'
+            'assignee', 'reporter', 'created', 'updated', 'comment', 'labels',
+            'issuetype', 'components'
         ]
         return self.data.get('fields', {}).get('core', default_fields)
     
