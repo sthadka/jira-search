@@ -150,8 +150,8 @@
             </div>
 
             <!-- Right column - Issue Detail Panel -->
-            <div class="w-96 flex-shrink-0">
-                <div id="issueDetailPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto hidden">
+            <div class="flex-1 max-w-2xl flex-shrink-0 mr-4">
+                <div id="issueDetailPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky top-4 h-[calc(100vh-2rem)] overflow-y-auto hidden">
                     <div class="flex justify-between items-start mb-4">
                         <h3 id="panelTitle" class="text-lg font-medium text-gray-900 dark:text-gray-100 flex-1 mr-4">Select an issue to view details</h3>
                         <button onclick="closeDetailPanel()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
@@ -850,39 +850,61 @@
                     </div>
                     
                     <!-- Metadata Grid -->
-                    <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Status</div>
-                            <span class="px-2 py-1 rounded-full text-xs font-medium status-badge ${getStatusClass(issue.status.name)}">${issue.status.name}</span>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Status</div>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium status-badge ${getStatusClass(issue.status.name)} cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                                  onclick="searchByField('status', '${issue.status.name}'); closeDetailPanel();"
+                                  title="Click to filter by status: ${issue.status.name}">${issue.status.name}</span>
                         </div>
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Priority</div>
-                            <span class="px-2 py-1 rounded-full text-xs font-medium priority-badge ${getPriorityClass(issue.priority.name)}">${issue.priority.name || 'None'}</span>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Priority</div>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium priority-badge ${getPriorityClass(issue.priority.name)} cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                                  onclick="searchByField('priority', '${issue.priority.name}'); closeDetailPanel();"
+                                  title="Click to filter by priority: ${issue.priority.name}">${issue.priority.name || 'None'}</span>
                         </div>
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Assignee</div>
-                            <div class="text-gray-900 dark:text-gray-100">${issue.assignee.display_name || 'Unassigned'}</div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Assignee</div>
+                            <div class="text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-500 hover:text-white hover:px-3 hover:py-1 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 inline-block"
+                                 onclick="searchByField('assignee', '${escapeHtml(issue.assignee.display_name)}'); closeDetailPanel();"
+                                 title="Click to filter by assignee: ${escapeHtml(issue.assignee.display_name)}">${issue.assignee.display_name || 'Unassigned'}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Reporter</div>
-                            <div class="text-gray-900 dark:text-gray-100">${issue.reporter.display_name || 'Unknown'}</div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Reporter</div>
+                            <div class="text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-500 hover:text-white hover:px-3 hover:py-1 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 inline-block"
+                                 onclick="searchByField('reporter', '${escapeHtml(issue.reporter.display_name)}'); closeDetailPanel();"
+                                 title="Click to filter by reporter: ${escapeHtml(issue.reporter.display_name)}">${issue.reporter.display_name || 'Unknown'}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Updated</div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Updated</div>
                             <div class="text-gray-900 dark:text-gray-100">${formatDate(issue.updated)}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium">Created</div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Created</div>
                             <div class="text-gray-900 dark:text-gray-100">${formatDate(issue.created)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Project</div>
+                            <div class="text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-500 hover:text-white hover:px-3 hover:py-1 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 inline-block"
+                                 onclick="searchByField('project', '${issue.project.key}'); closeDetailPanel();"
+                                 title="Click to filter by project: ${issue.project.key}">${issue.project.key} • ${issue.project.name}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 dark:text-gray-400 font-medium mb-1">Issue Type</div>
+                            <div class="text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-500 hover:text-white hover:px-3 hover:py-1 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 inline-block"
+                                 onclick="searchByField('issuetype', '${issue.issue_type}'); closeDetailPanel();"
+                                 title="Click to filter by issue type: ${issue.issue_type}">${issue.issue_type}</div>
                         </div>
                     </div>
                     
                     ${issue.labels ? `
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-1">Labels</div>
-                            <div class="flex flex-wrap gap-1">
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-2">Labels</div>
+                            <div class="flex flex-wrap gap-2">
                                 ${issue.labels.split(', ').filter(l => l.trim()).map(label => 
-                                    `<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">${escapeHtml(label.trim())}</span>`
+                                    `<span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                                           onclick="searchByField('labels', '${escapeHtml(label.trim())}'); closeDetailPanel();"
+                                           title="Click to filter by label: ${escapeHtml(label.trim())}">🏷️ ${escapeHtml(label.trim())}</span>`
                                 ).join('')}
                             </div>
                         </div>
@@ -890,10 +912,12 @@
                     
                     ${issue.components ? `
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-1">Components</div>
-                            <div class="flex flex-wrap gap-1">
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-2">Components</div>
+                            <div class="flex flex-wrap gap-2">
                                 ${issue.components.split(', ').filter(c => c.trim()).map(component => 
-                                    `<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">${escapeHtml(component.trim())}</span>`
+                                    `<span class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm cursor-pointer hover:bg-green-200 dark:hover:bg-green-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                                           onclick="searchByField('components', '${escapeHtml(component.trim())}'); closeDetailPanel();"
+                                           title="Click to filter by component: ${escapeHtml(component.trim())}">🔧 ${escapeHtml(component.trim())}</span>`
                                 ).join('')}
                             </div>
                         </div>
@@ -904,8 +928,8 @@
                     
                     <!-- Description -->
                     <div>
-                        <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-2">Description</div>
-                        <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-3 rounded max-h-40 overflow-y-auto">
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-3">Description</div>
+                        <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg max-h-60 overflow-y-auto leading-relaxed">
                             ${parseJiraMarkdown(issue.description) || 'No description provided'}
                         </div>
                     </div>
@@ -913,8 +937,8 @@
                     <!-- Comments -->
                     ${issue.comments && issue.comments.trim() ? `
                         <div>
-                            <div class="text-gray-500 dark:text-gray-400 font-medium text-xs mb-2">Comments</div>
-                            <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-3 rounded max-h-32 overflow-y-auto">
+                            <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-3">Comments</div>
+                            <div class="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg max-h-48 overflow-y-auto leading-relaxed">
                                 ${parseJiraMarkdown(issue.comments)}
                             </div>
                         </div>
@@ -928,16 +952,45 @@
             
             const fields = [];
             if (customFields.team) {
-                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">Team</div><div class="text-gray-900 dark:text-gray-100">${escapeHtml(customFields.team)}</div>`);
+                fields.push(`
+                    <div>
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">Team</div>
+                        <span class="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-sm cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                              onclick="searchByField('team', '${escapeHtml(customFields.team)}'); closeDetailPanel();"
+                              title="Click to filter by team: ${escapeHtml(customFields.team)}">👥 ${escapeHtml(customFields.team)}</span>
+                    </div>
+                `);
             }
             if (customFields.work_type) {
-                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">Work Type</div><div class="text-gray-900 dark:text-gray-100">${escapeHtml(customFields.work_type)}</div>`);
+                fields.push(`
+                    <div>
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">Work Type</div>
+                        <span class="px-3 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded text-sm cursor-pointer hover:bg-orange-200 dark:hover:bg-orange-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                              onclick="searchByField('work_type', '${escapeHtml(customFields.work_type)}'); closeDetailPanel();"
+                              title="Click to filter by work type: ${escapeHtml(customFields.work_type)}">🔧 ${escapeHtml(customFields.work_type)}</span>
+                    </div>
+                `);
             }
             if (customFields.px_impact_score) {
-                fields.push(`<div class="text-gray-500 dark:text-gray-400 font-medium text-xs">PX Impact Score</div><div class="text-gray-900 dark:text-gray-100">${customFields.px_impact_score}</div>`);
+                fields.push(`
+                    <div>
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">PX Impact Score</div>
+                        <div class="text-gray-900 dark:text-gray-100 font-medium">📊 ${customFields.px_impact_score}</div>
+                    </div>
+                `);
+            }
+            if (customFields.product_manager) {
+                fields.push(`
+                    <div>
+                        <div class="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">Product Manager</div>
+                        <div class="text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-500 hover:text-white hover:px-3 hover:py-1 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 inline-block"
+                             onclick="searchByField('product_manager', '${escapeHtml(customFields.product_manager)}'); closeDetailPanel();"
+                             title="Click to filter by product manager: ${escapeHtml(customFields.product_manager)}">👨‍💼 ${escapeHtml(customFields.product_manager)}</div>
+                    </div>
+                `);
             }
             
-            return fields.length > 0 ? `<div class="grid grid-cols-2 gap-3 text-xs">${fields.join('')}</div>` : '';
+            return fields.length > 0 ? `<div class="grid grid-cols-2 gap-4 text-sm">${fields.join('')}</div>` : '';
         }
 
         function displayPanelError(message) {
@@ -1351,6 +1404,15 @@
                     break;
                 case 'components':
                     jqlQuery = `components = "${fieldValue}"`;
+                    break;
+                case 'project':
+                    jqlQuery = `project = "${fieldValue}"`;
+                    break;
+                case 'issuetype':
+                    jqlQuery = `issuetype = "${fieldValue}"`;
+                    break;
+                case 'product_manager':
+                    jqlQuery = `product_manager = "${fieldValue}"`;
                     break;
                 default:
                     // Fall back to natural language search
