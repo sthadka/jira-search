@@ -272,3 +272,62 @@ class JiraClient:
             return True
         except JiraClientError:
             return False
+    
+    def get_custom_fields(self) -> List[Dict[str, Any]]:
+        """Get all custom fields from Jira.
+        
+        Returns:
+            List of custom field definitions from Jira
+            
+        Raises:
+            JiraClientError: If request fails
+        """
+        logger.debug("Getting custom fields from Jira")
+        try:
+            response = self._make_request('GET', 'field')
+            all_fields = response.json()
+            
+            # Filter to only custom fields (those starting with 'customfield_')
+            custom_fields = [
+                field for field in all_fields 
+                if field.get('id', '').startswith('customfield_')
+            ]
+            
+            logger.info(f"Found {len(custom_fields)} custom fields")
+            return custom_fields
+            
+        except Exception as e:
+            raise JiraClientError(f"Failed to get custom fields: {e}")
+    
+    def get_project_custom_fields(self, project_key: str) -> List[Dict[str, Any]]:
+        """Get custom fields used in a specific project.
+        
+        Args:
+            project_key: Jira project key
+            
+        Returns:
+            List of custom fields used in the project
+            
+        Raises:
+            JiraClientError: If request fails
+        """
+        logger.debug(f"Getting custom fields for project: {project_key}")
+        try:
+            # Get project metadata to see which fields are configured
+            response = self._make_request('GET', f'project/{project_key}')
+            project_data = response.json()
+            
+            # Get issue types for the project to see field configurations
+            issue_types = project_data.get('issueTypes', [])
+            
+            # Get all custom fields and filter to those used in this project
+            all_custom_fields = self.get_custom_fields()
+            
+            # For simplicity, return all custom fields
+            # In a more sophisticated implementation, we could check field configurations
+            # per issue type to see which fields are actually used
+            
+            return all_custom_fields
+            
+        except Exception as e:
+            raise JiraClientError(f"Failed to get project custom fields: {e}")

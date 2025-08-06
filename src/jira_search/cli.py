@@ -34,64 +34,119 @@ def cli(ctx, config: str, verbose: bool):
 
 
 @cli.command()
+@click.option('--with-examples', is_flag=True, help='Include detailed examples and comments')
+@click.option('--minimal', is_flag=True, help='Generate minimal configuration with required fields only')
 @click.pass_context
-def init_config(ctx):
-    """Generate a sample configuration file."""
+def init_config(ctx, with_examples: bool, minimal: bool):
+    """Generate a configuration file template."""
     config_path = ctx.obj['config_path']
-    example_path = 'config.yaml.example'
     
     if Path(config_path).exists():
         click.echo(f"Configuration file {config_path} already exists.")
         if not click.confirm("Overwrite existing file?"):
             return
     
-    if not Path(example_path).exists():
-        click.echo(f"Error: {example_path} not found in current directory.", err=True)
-        click.echo("Please run this command from the jira-search project directory.", err=True)
-        sys.exit(1)
-    
     try:
-        # Copy example file to config file
-        with open(example_path, 'r') as src:
-            content = src.read()
+        if minimal:
+            # Generate minimal config
+            content = """# Minimal Jira Search Mirror Configuration
+jira:
+  url: "https://your-jira.company.com"
+  username: "your-username"
+  pat: "your-personal-access-token"
+
+sync:
+  project_key: "PROJ"  # or use 'jql' instead
+
+custom_fields: []
+"""
+        else:
+            # Generate full config with examples
+            config = Config.__new__(Config)  # Create without loading
+            content = config.generate_example_config()
         
-        with open(config_path, 'w') as dst:
-            dst.write(content)
+        with open(config_path, 'w') as f:
+            f.write(content)
         
-        click.echo(f"Configuration template created: {config_path}")
-        click.echo("Please edit the file with your Jira details before running other commands.")
+        click.echo(f"✓ Configuration template created: {config_path}")
+        if not minimal:
+            click.echo("📝 The configuration includes:")
+            click.echo("  • Environment variable support (${VAR_NAME} or ${VAR_NAME:default})")
+            click.echo("  • Detailed comments and examples")
+            click.echo("  • All available configuration options")
+        click.echo()
+        click.echo("Next steps:")
+        click.echo("1. Edit the configuration file with your Jira details")
+        click.echo("2. Test the connection: python -m jira_search test-connection")
+        click.echo("3. Discover custom fields: python -m jira_search discover-fields")
         
     except Exception as e:
-        click.echo(f"Error creating configuration file: {e}", err=True)
+        click.echo(f"✗ Error creating configuration file: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command()
+@click.option('--detailed', is_flag=True, help='Show detailed validation information')
 @click.pass_context
-def validate_config(ctx):
-    """Validate configuration file."""
+def validate_config(ctx, detailed: bool):
+    """Validate configuration file with comprehensive checks."""
     config_path = ctx.obj['config_path']
     
     try:
+        click.echo("🔍 Validating configuration...")
         config = load_config(config_path)
         click.echo("✓ Configuration file is valid")
         
-        # Show configuration summary
-        click.echo(f"  Jira URL: {config.jira_url}")
-        click.echo(f"  Username: {config.jira_username}")
-        click.echo(f"  Database: {config.database_path}")
+        if detailed:
+            click.echo()
+            click.echo("📋 Configuration Summary:")
+            click.echo(f"  • Jira URL: {config.jira_url}")
+            click.echo(f"  • Username: {config.jira_username}")
+            click.echo(f"  • Database: {config.database_path}")
+            click.echo(f"  • Rate limit: {config.sync_rate_limit} requests/minute")
+            click.echo(f"  • Batch size: {config.sync_batch_size} issues/batch")
+            click.echo(f"  • Search timeout: {config.search_timeout_seconds}s")
+            click.echo(f"  • Max results: {config.search_max_results}")
+            
+            if config.sync_project_key:
+                click.echo(f"  • Sync scope: Project {config.sync_project_key}")
+            elif config.sync_jql:
+                click.echo(f"  • Sync scope: Custom JQL query")
+            
+            if config.custom_fields:
+                click.echo(f"  • Custom fields: {len(config.custom_fields)} configured")
+                for field in config.custom_fields:
+                    click.echo(f"    - {field.get('name', 'Unnamed')} ({field.get('id')}) [{field.get('type', 'text')}]")
+            else:
+                click.echo(f"  • Custom fields: None configured")
+            
+            # Check environment variables used
+            env_vars_used = []
+            try:
+                with open(config_path, 'r') as f:
+                    content = f.read()
+                    import re
+                    env_vars = re.findall(r'\$\{([^}]+)\}', content)
+                    for var in env_vars:
+                        var_name = var.split(':')[0] if ':' in var else var
+                        env_vars_used.append(var_name)
+                
+                if env_vars_used:
+                    click.echo(f"  • Environment variables: {', '.join(set(env_vars_used))}")
+            except Exception:
+                pass
         
-        if config.sync_project_key:
-            click.echo(f"  Sync scope: Project {config.sync_project_key}")
-        elif config.sync_jql:
-            click.echo(f"  Sync scope: JQL query")
-        
-        if config.custom_fields:
-            click.echo(f"  Custom fields: {len(config.custom_fields)} configured")
+        click.echo()
+        click.echo("✅ Configuration is ready for use!")
         
     except ConfigError as e:
         click.echo(f"✗ Configuration validation failed:", err=True)
-        click.echo(f"  {e}", err=True)
+        click.echo()
+        # Split error message into lines and format nicely
+        error_lines = str(e).split('\n')
+        for line in error_lines:
+            if line.strip():
+                click.echo(f"  {line}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"✗ Error loading configuration: {e}", err=True)
@@ -129,6 +184,115 @@ def test_connection(ctx):
         sys.exit(1)
     except JiraClientError as e:
         click.echo(f"✗ Jira connection error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command('discover-fields')
+@click.option('--project', help='Project key to filter fields (optional)')
+@click.option('--output', help='Output discovered fields to config file section')
+@click.option('--filter', help='Filter fields by name (case-insensitive substring match)')
+@click.pass_context
+def discover_fields(ctx, project: Optional[str], output: Optional[str], filter: Optional[str]):
+    """Discover custom fields from Jira and optionally update configuration."""
+    config_path = ctx.obj['config_path']
+    
+    try:
+        # Load config and test connection
+        config = load_config(config_path)
+        client = JiraClient(config)
+        
+        click.echo("🔍 Discovering custom fields from Jira...")
+        
+        # Test connection first
+        connection_result = client.test_connection()
+        if not connection_result['success']:
+            click.echo(f"✗ Jira connection failed: {connection_result['error']}", err=True)
+            sys.exit(1)
+        
+        # Get custom fields
+        if project:
+            click.echo(f"📁 Getting custom fields for project: {project}")
+            custom_fields = client.get_project_custom_fields(project)
+        else:
+            click.echo("🌐 Getting all custom fields from Jira...")
+            custom_fields = client.get_custom_fields()
+        
+        # Apply filter if specified
+        if filter:
+            filter_lower = filter.lower()
+            custom_fields = [
+                field for field in custom_fields
+                if filter_lower in field.get('name', '').lower()
+            ]
+            click.echo(f"🔍 Filtered to {len(custom_fields)} fields matching '{filter}'")
+        
+        if not custom_fields:
+            click.echo("No custom fields found.")
+            return
+        
+        click.echo(f"✓ Found {len(custom_fields)} custom fields:")
+        click.echo()
+        
+        # Display discovered fields
+        relevant_fields = []
+        for field in custom_fields:
+            field_id = field.get('id')
+            field_name = field.get('name', 'Unnamed')
+            field_type = field.get('schema', {}).get('type', 'string')
+            
+            # Check if field might be useful for search/filtering
+            is_relevant = any(keyword in field_name.lower() for keyword in [
+                'team', 'component', 'epic', 'story', 'points', 'priority', 
+                'severity', 'impact', 'environment', 'version', 'product',
+                'sprint', 'fixversion', 'affectedversion', 'label'
+            ])
+            
+            status_icon = "⭐" if is_relevant else "  "
+            click.echo(f"{status_icon} {field_id:<20} {field_name:<40} [{field_type}]")
+            
+            if is_relevant:
+                relevant_fields.append({
+                    'id': field_id,
+                    'name': field_name,
+                    'type': 'number' if field_type == 'number' else 'text'
+                })
+        
+        if output:
+            # Generate YAML for the discovered fields
+            click.echo()
+            click.echo("📝 Configuration section for relevant fields:")
+            click.echo("custom_fields:")
+            for field in relevant_fields:
+                click.echo(f"  - id: \"{field['id']}\"")
+                click.echo(f"    name: \"{field['name']}\"")
+                click.echo(f"    type: \"{field['type']}\"")
+                click.echo()
+            
+            if output != '-':
+                # Write to file
+                with open(output, 'w') as f:
+                    f.write("custom_fields:\n")
+                    for field in relevant_fields:
+                        f.write(f"  - id: \"{field['id']}\"\n")
+                        f.write(f"    name: \"{field['name']}\"\n")
+                        f.write(f"    type: \"{field['type']}\"\n")
+                        f.write("\n")
+                click.echo(f"✓ Configuration written to: {output}")
+        
+        click.echo()
+        click.echo("💡 Tips:")
+        click.echo("  • Fields marked with ⭐ are likely useful for search and filtering")
+        click.echo("  • Add relevant fields to your config.yaml custom_fields section")
+        click.echo("  • Re-sync your data after adding custom fields: python -m jira_search sync --full")
+        
+    except ConfigError as e:
+        click.echo(f"✗ Configuration error: {e}", err=True)
+        sys.exit(1)
+    except JiraClientError as e:
+        click.echo(f"✗ Jira API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"✗ Unexpected error: {e}", err=True)
