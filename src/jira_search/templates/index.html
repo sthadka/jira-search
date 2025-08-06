@@ -1074,7 +1074,7 @@
                             <!-- Title and URL-like line -->
                             <div class="mb-1">
                                 <div class="text-blue-600 dark:text-blue-400 hover:underline text-lg font-medium">${escapeHtml(result.summary)}</div>
-                                <div class="text-green-600 dark:text-green-400 text-sm">${result.key} • ${result.project_key}</div>
+                                <div class="text-green-600 dark:text-green-400 text-sm">${result.key}${result.project_key ? ' • ' + result.project_key : ''}</div>
                             </div>
                             
                             <!-- Description snippet -->
