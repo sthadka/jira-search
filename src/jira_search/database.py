@@ -276,7 +276,10 @@ class Database:
         try:
             processed_data = self._process_issue_data(issue_data)
             
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+                # Set WAL mode for better concurrency handling
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=30000")  # 30 second timeout
                 # Build dynamic SQL based on configured core fields and custom fields
                 columns = ['key', 'summary']  # Always required
                 placeholders = ['?', '?']
@@ -344,6 +347,103 @@ class Database:
                 """
                 
                 conn.execute(sql, values)
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to upsert issue {issue_data.get('key', 'unknown')}: {e}")
+    
+    def upsert_issue_with_stats(self, issue_data: Dict[str, Any]) -> bool:
+        """Insert or update an issue and return whether it was existing.
+        
+        Args:
+            issue_data: Issue data from Jira API
+            
+        Returns:
+            True if issue was updated (existed), False if it was inserted (new)
+            
+        Raises:
+            DatabaseError: If operation fails
+        """
+        try:
+            processed_data = self._process_issue_data(issue_data)
+            issue_key = processed_data['key']
+            
+            with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+                # Set WAL mode for better concurrency handling
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=30000")  # 30 second timeout
+                
+                # Check if issue exists in a single transaction
+                cursor = conn.execute("SELECT key FROM issues WHERE key = ?", (issue_key,))
+                existing = cursor.fetchone()
+                
+                # Build dynamic SQL based on configured core fields and custom fields
+                columns = ['key', 'summary']  # Always required
+                placeholders = ['?', '?']
+                values = [processed_data['key'], processed_data['summary']]
+                
+                # Add configurable core fields
+                field_mappings = {
+                    'description': 'description',
+                    'status': ['status_id', 'status_name'],
+                    'priority': ['priority_id', 'priority_name'], 
+                    'assignee': ['assignee_key', 'assignee_name', 'assignee_display_name'],
+                    'reporter': ['reporter_key', 'reporter_name', 'reporter_display_name'],
+                    'created': 'created',
+                    'updated': 'updated',
+                    'comment': 'comments',
+                    'labels': 'labels',
+                    'components': 'components',
+                    'fixVersions': 'fix_versions',
+                    'affectedVersions': 'affected_versions'
+                }
+                
+                for field in self.config.core_fields:
+                    if field in ['key', 'summary']:
+                        continue  # Already handled
+                    
+                    if field in field_mappings:
+                        mapping = field_mappings[field]
+                        if isinstance(mapping, list):
+                            # Multiple columns for this field
+                            for col in mapping:
+                                columns.append(col)
+                                placeholders.append('?')
+                                values.append(processed_data.get(col))
+                        else:
+                            # Single column
+                            columns.append(mapping)
+                            placeholders.append('?')
+                            values.append(processed_data.get(mapping))
+                
+                # Add project and issue type (commonly needed)
+                columns.extend(['project_key', 'project_name', 'issue_type'])
+                placeholders.extend(['?', '?', '?'])
+                values.extend([
+                    processed_data.get('project_key'),
+                    processed_data.get('project_name'),
+                    processed_data.get('issue_type')
+                ])
+                
+                # Add custom fields
+                for field in self.custom_fields:
+                    column_name = f"custom_{field['id'].replace('customfield_', '')}"
+                    columns.append(column_name)
+                    placeholders.append('?')
+                    values.append(processed_data.get(field['id']))
+                
+                # Add metadata fields
+                columns.extend(['raw_json'])
+                placeholders.extend(['?'])
+                values.append(json.dumps(issue_data))
+                
+                sql = f"""
+                INSERT OR REPLACE INTO issues (
+                    {', '.join(columns)}
+                ) VALUES ({', '.join(placeholders)})
+                """
+                
+                conn.execute(sql, values)
+                return existing is not None
                 
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to upsert issue {issue_data.get('key', 'unknown')}: {e}")

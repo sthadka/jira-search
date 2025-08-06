@@ -403,16 +403,13 @@ def sync(ctx, project: Optional[str], jql: Optional[str], incremental: bool, ful
         with click.progressbar(length=total_issues, label='Syncing issues') as bar:
             for issue in client.search_issues_paginated(sync_jql):
                 try:
-                    # Check if issue exists to track add vs update
                     issue_key = issue.get('key')
-                    with sqlite3.connect(db.db_path) as conn:
-                        cursor = conn.execute("SELECT key FROM issues WHERE key = ?", (issue_key,))
-                        existing = cursor.fetchone()
                     
-                    db.upsert_issue(issue)
+                    # Use the database method that handles existence checking internally
+                    was_existing = db.upsert_issue_with_stats(issue)
                     synced_count += 1
                     
-                    if existing:
+                    if was_existing:
                         updated_count += 1
                     else:
                         added_count += 1
