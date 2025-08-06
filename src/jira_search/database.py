@@ -4,7 +4,7 @@ import sqlite3
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from jira_search.config import Config
@@ -99,7 +99,9 @@ class Database:
             project_name TEXT,
             issue_type TEXT{custom_fields_sql},
             raw_json TEXT,
-            synced_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_deleted BOOLEAN DEFAULT FALSE,
+            deleted_at DATETIME
         )
         """
         
@@ -184,6 +186,12 @@ class Database:
                 id INTEGER PRIMARY KEY,
                 last_sync_time DATETIME,
                 last_sync_query TEXT,
+                last_full_sync DATETIME,
+                issues_processed INTEGER DEFAULT 0,
+                issues_added INTEGER DEFAULT 0,
+                issues_updated INTEGER DEFAULT 0,
+                issues_deleted INTEGER DEFAULT 0,
+                sync_duration_seconds REAL DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -191,8 +199,8 @@ class Database:
         
         # Insert initial row if not exists
         conn.execute("""
-            INSERT OR IGNORE INTO sync_metadata (id, last_sync_time, last_sync_query)
-            VALUES (1, NULL, NULL)
+            INSERT OR IGNORE INTO sync_metadata (id, last_sync_time, last_sync_query, last_full_sync)
+            VALUES (1, NULL, NULL, NULL)
         """)
     
     def _create_indexes(self, conn: sqlite3.Connection) -> None:
@@ -204,7 +212,9 @@ class Database:
             "CREATE INDEX IF NOT EXISTS idx_issues_priority ON issues(priority_name)",
             "CREATE INDEX IF NOT EXISTS idx_issues_project ON issues(project_key)",
             "CREATE INDEX IF NOT EXISTS idx_issues_created ON issues(created)",
-            "CREATE INDEX IF NOT EXISTS idx_issues_synced_at ON issues(synced_at)"
+            "CREATE INDEX IF NOT EXISTS idx_issues_synced_at ON issues(synced_at)",
+            "CREATE INDEX IF NOT EXISTS idx_issues_is_deleted ON issues(is_deleted)",
+            "CREATE INDEX IF NOT EXISTS idx_issues_deleted_at ON issues(deleted_at)"
         ]
         
         for index_sql in indexes:
@@ -393,22 +403,120 @@ class Database:
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to clear issues: {e}")
     
-    def update_sync_metadata(self, sync_query: str) -> None:
+    def update_sync_metadata(self, sync_query: str, is_full_sync: bool = False, 
+                           sync_stats: Optional[Dict[str, int]] = None, 
+                           duration_seconds: float = 0) -> None:
         """Update sync metadata after successful sync.
         
         Args:
             sync_query: JQL query used for sync
+            is_full_sync: Whether this was a full sync
+            sync_stats: Dictionary with sync statistics
+            duration_seconds: How long the sync took
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                now = datetime.now().isoformat()
+                stats = sync_stats or {}
+                
+                if is_full_sync:
+                    conn.execute("""
+                        UPDATE sync_metadata 
+                        SET last_sync_time = ?, last_sync_query = ?, last_full_sync = ?,
+                            issues_processed = ?, issues_added = ?, issues_updated = ?, 
+                            issues_deleted = ?, sync_duration_seconds = ?, updated_at = ?
+                        WHERE id = 1
+                    """, (now, sync_query, now, 
+                          stats.get('processed', 0), stats.get('added', 0), 
+                          stats.get('updated', 0), stats.get('deleted', 0),
+                          duration_seconds, now))
+                else:
+                    conn.execute("""
+                        UPDATE sync_metadata 
+                        SET last_sync_time = ?, last_sync_query = ?,
+                            issues_processed = ?, issues_added = ?, issues_updated = ?, 
+                            issues_deleted = ?, sync_duration_seconds = ?, updated_at = ?
+                        WHERE id = 1
+                    """, (now, sync_query, 
+                          stats.get('processed', 0), stats.get('added', 0), 
+                          stats.get('updated', 0), stats.get('deleted', 0),
+                          duration_seconds, now))
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to update sync metadata: {e}")
+    
+    def mark_issue_deleted(self, issue_key: str) -> None:
+        """Mark an issue as deleted instead of removing it.
+        
+        Args:
+            issue_key: Jira issue key
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("""
-                    UPDATE sync_metadata 
-                    SET last_sync_time = ?, last_sync_query = ?, updated_at = ?
-                    WHERE id = 1
-                """, (datetime.now().isoformat(), sync_query, datetime.now().isoformat()))
+                    UPDATE issues 
+                    SET is_deleted = TRUE, deleted_at = ?
+                    WHERE key = ?
+                """, (datetime.now().isoformat(), issue_key))
                 
         except sqlite3.Error as e:
-            raise DatabaseError(f"Failed to update sync metadata: {e}")
+            raise DatabaseError(f"Failed to mark issue as deleted: {e}")
+    
+    def cleanup_deleted_issues(self, days_old: int = 30) -> int:
+        """Remove issues that have been marked as deleted for a specified time.
+        
+        Args:
+            days_old: Number of days since deletion to keep issues
+            
+        Returns:
+            Number of issues permanently removed
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cutoff_date = (datetime.now() - timedelta(days=days_old)).isoformat()
+                
+                # Count issues to be deleted
+                cursor = conn.execute("""
+                    SELECT COUNT(*) FROM issues 
+                    WHERE is_deleted = TRUE AND deleted_at < ?
+                """, (cutoff_date,))
+                count = cursor.fetchone()[0]
+                
+                # Delete old deleted issues
+                conn.execute("""
+                    DELETE FROM issues 
+                    WHERE is_deleted = TRUE AND deleted_at < ?
+                """, (cutoff_date,))
+                
+                return count
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to cleanup deleted issues: {e}")
+    
+    def get_deleted_issues(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get list of recently deleted issues.
+        
+        Args:
+            limit: Maximum number of deleted issues to return
+            
+        Returns:
+            List of deleted issue information
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT key, summary, deleted_at, project_key
+                    FROM issues 
+                    WHERE is_deleted = TRUE 
+                    ORDER BY deleted_at DESC 
+                    LIMIT ?
+                """, (limit,))
+                
+                return [dict(row) for row in cursor.fetchall()]
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to get deleted issues: {e}")
     
     def get_last_sync_time(self) -> Optional[str]:
         """Get the last sync timestamp for incremental sync.
@@ -441,12 +549,18 @@ class Database:
                 
                 # Get sync metadata
                 cursor = conn.execute("""
-                    SELECT last_sync_time, last_sync_query 
+                    SELECT last_sync_time, last_sync_query, last_full_sync,
+                           issues_processed, issues_added, issues_updated, 
+                           issues_deleted, sync_duration_seconds
                     FROM sync_metadata WHERE id = 1
                 """)
                 sync_data = cursor.fetchone()
-                last_sync_time = sync_data[0] if sync_data else None
-                last_sync_query = sync_data[1] if sync_data else None
+                if sync_data:
+                    last_sync_time, last_sync_query, last_full_sync, issues_processed, \
+                    issues_added, issues_updated, issues_deleted, sync_duration_seconds = sync_data
+                else:
+                    last_sync_time = last_sync_query = last_full_sync = None
+                    issues_processed = issues_added = issues_updated = issues_deleted = sync_duration_seconds = 0
                 
                 # Get oldest and newest issues
                 cursor = conn.execute("SELECT key FROM issues ORDER BY created ASC LIMIT 1")
@@ -465,6 +579,12 @@ class Database:
                     'total_issues': total_issues,
                     'last_sync_time': last_sync_time,
                     'last_sync_query': last_sync_query,
+                    'last_full_sync': last_full_sync,
+                    'issues_processed': issues_processed,
+                    'issues_added': issues_added,
+                    'issues_updated': issues_updated,
+                    'issues_deleted': issues_deleted,
+                    'sync_duration_seconds': sync_duration_seconds,
                     'oldest_issue': oldest_issue,
                     'newest_issue': newest_issue,
                     'database_size_mb': db_size_mb
@@ -488,12 +608,12 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 
-                # Search using FTS5
+                # Search using FTS5, excluding deleted issues
                 cursor = conn.execute("""
                     SELECT i.*, rank 
                     FROM issues_fts fts
                     JOIN issues i ON i.rowid = fts.rowid
-                    WHERE issues_fts MATCH ?
+                    WHERE issues_fts MATCH ? AND (i.is_deleted IS NULL OR i.is_deleted = FALSE)
                     ORDER BY rank
                     LIMIT ? OFFSET ?
                 """, (query, limit, offset))
@@ -503,8 +623,9 @@ class Database:
                 # Get total count
                 cursor = conn.execute("""
                     SELECT COUNT(*)
-                    FROM issues_fts
-                    WHERE issues_fts MATCH ?
+                    FROM issues_fts fts
+                    JOIN issues i ON i.rowid = fts.rowid
+                    WHERE issues_fts MATCH ? AND (i.is_deleted IS NULL OR i.is_deleted = FALSE)
                 """, (query,))
                 
                 total = cursor.fetchone()[0]
