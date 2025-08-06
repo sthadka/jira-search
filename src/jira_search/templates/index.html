@@ -7,803 +7,44 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:ital,wght@0,300..700;1,300..700&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Red Hat Text', 'ui-sans-serif', 'system-ui'],
+                        'mono': ['IBM Plex Mono', 'ui-monospace', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            /* Light mode colors */
-            --bg-color: #f5f5f5;
-            --bg-secondary: #ffffff;
-            --text-color: #333;
-            --text-secondary: #7f8c8d;
-            --border-color: #e0e0e0;
-            --accent-color: #3498db;
-            --accent-hover: #2980b9;
-            --success-color: #27ae60;
-            --error-color: #e74c3c;
-            --shadow: rgba(0,0,0,0.1);
-            --modal-overlay: rgba(0, 0, 0, 0.5);
-        }
-
-        [data-theme="dark"] {
-            /* Dark mode colors */
-            --bg-color: #1a1a1a;
-            --bg-secondary: #2d2d2d;
-            --text-color: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --border-color: #444;
-            --accent-color: #4a9eff;
-            --accent-hover: #357abd;
-            --success-color: #2ecc71;
-            --error-color: #e74c3c;
-            --shadow: rgba(0,0,0,0.3);
-            --modal-overlay: rgba(0, 0, 0, 0.7);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Red Hat Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .header {
-            position: relative;
-        }
-
-        .header h1 {
-            color: var(--text-color);
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            font-weight: 300;
-        }
-
-        .stats {
-            color: var(--text-secondary);
-            font-size: 0.9em;
-            margin-bottom: 20px;
-        }
-
-        .theme-toggle {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--text-color);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .theme-toggle:hover {
-            background: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
-
-        .search-container {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px var(--shadow);
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-
-        .search-box {
-            width: 100%;
-            padding: 15px 20px;
-            font-size: 16px;
-            border: 2px solid var(--border-color);
-            border-radius: 50px;
-            outline: none;
-            transition: border-color 0.3s ease;
-            background: var(--bg-secondary);
-            color: var(--text-color);
-        }
-
-        .search-box:focus {
-            border-color: var(--accent-color);
-        }
-
-        .search-modes {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .search-mode {
-            padding: 8px 16px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-            color: var(--text-color);
-        }
-
-        .search-mode.active {
-            background: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
-
-        .search-mode:hover {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .search-mode.active:hover {
-            background: var(--accent-hover);
-        }
-
-        .search-help {
-            margin-top: 15px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #3498db;
-            font-size: 14px;
-        }
-
-        .search-examples {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .example-section {
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .example-section strong {
-            color: #2c3e50;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .example-section ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .example-section li {
-            margin-bottom: 5px;
-            line-height: 1.4;
-        }
-
-        .example-section code {
-            background: var(--bg-color);
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: 'IBM Plex Mono', 'Monaco', 'Courier New', monospace;
-            font-size: 12px;
-            color: var(--text-color);
-        }
-
-        .validation-message {
-            margin-top: 10px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            display: none;
-        }
-
-        .validation-message.error {
-            background: #fee;
-            color: #c0392b;
-            border: 1px solid #f5b7b1;
-        }
-
-        .validation-message.success {
-            background: #eaffea;
-            color: #27ae60;
-            border: 1px solid #a9dfbf;
-        }
-
-        .suggestions-container {
-            position: relative;
-        }
-
-        .suggestions-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background-color 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .suggestion-item:hover,
-        .suggestion-item.highlighted {
-            background-color: #f8f9fa;
-        }
-
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        .suggestion-icon {
-            font-size: 14px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .suggestion-label {
-            flex: 1;
-            font-size: 14px;
-            color: #2c3e50;
-        }
-
-        .suggestion-type {
-            font-size: 11px;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Issue Detail Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--modal-overlay);
-            display: none;
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            width: 100%;
-            max-width: 800px;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 10px 30px var(--shadow);
-        }
-
-        .modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            background: #f8f9fa;
-            border-radius: 12px 12px 0 0;
-        }
-
-        .modal-title {
-            flex: 1;
-            margin: 0;
-            font-size: 20px;
-            color: #2c3e50;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #7f8c8d;
-            padding: 0;
-            margin-left: 20px;
-        }
-
-        .modal-close:hover {
-            color: #2c3e50;
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .issue-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-            padding: 16px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .meta-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .meta-label {
-            font-size: 12px;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
-
-        .meta-value {
-            font-size: 14px;
-            color: #2c3e50;
-            font-weight: 500;
-        }
-
-        .issue-description {
-            margin-bottom: 24px;
-        }
-
-        .issue-description h3 {
-            margin-bottom: 12px;
-            color: #2c3e50;
-            font-size: 16px;
-        }
-
-        .issue-description-content {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .issue-comments {
-            margin-bottom: 24px;
-        }
-
-        .issue-comments h3 {
-            margin-bottom: 12px;
-            color: #2c3e50;
-            font-size: 16px;
-        }
-
-        .comments-content {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .modal-actions {
-            padding: 16px 24px;
-            border-top: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f8f9fa;
-            border-radius: 0 0 12px 12px;
-        }
-
-        .modal-nav {
-            display: flex;
-            gap: 8px;
-        }
-
-        .modal-nav-btn {
-            padding: 8px 12px;
-            border: 1px solid #e0e0e0;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .modal-nav-btn:hover {
-            background: #ecf0f1;
-        }
-
-        .modal-nav-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .jira-link {
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-
-        .jira-link:hover {
-            background: #2980b9;
-            color: white;
-        }
-
-        .results-container {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px var(--shadow);
-            overflow: hidden;
-        }
-
-        .results-header {
-            padding: 20px;
-            background: var(--bg-color);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 500;
-            color: var(--text-color);
-        }
-
-        .results-list {
-            /* Use browser scrolling instead of inner scrollbar */
-        }
-
-        .result-item {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.2s ease;
-            cursor: pointer;
-        }
-
-        .result-item:hover {
-            background-color: var(--bg-color);
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-key {
-            font-weight: 600;
-            color: var(--accent-color);
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .result-summary {
-            font-size: 16px;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-
-        .result-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .result-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .status-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
-        .status-badge.open { background: #e74c3c; color: white; }
-        .status-badge.progress { background: #f39c12; color: white; }
-        .status-badge.done { background: #27ae60; color: white; }
-        .status-badge.default { background: #95a5a6; color: white; }
-
-        .priority-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .priority-badge.highest { background: #c0392b; color: white; }
-        .priority-badge.high { background: #e74c3c; color: white; }
-        .priority-badge.medium { background: #f39c12; color: white; }
-        .priority-badge.low { background: #27ae60; color: white; }
-        .priority-badge.lowest { background: #2ecc71; color: white; }
-        .priority-badge.default { background: #95a5a6; color: white; }
-
-        /* Bulk Actions Styles */
-        .bulk-actions-bar {
-            background: #3498db;
-            color: white;
-            padding: 12px 0;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-        }
-
-        .bulk-actions-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .bulk-selection-controls {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .bulk-select-all {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            user-select: none;
-        }
-
-        .bulk-select-all input[type="checkbox"] {
-            display: none;
-        }
-
-        .checkmark {
-            width: 18px;
-            height: 18px;
-            border: 2px solid white;
-            border-radius: 3px;
-            display: inline-block;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-
-        .bulk-select-all input[type="checkbox"]:checked + .checkmark {
-            background: white;
-            border-color: white;
-        }
-
-        .bulk-select-all input[type="checkbox"]:checked + .checkmark::after {
-            content: '';
-            position: absolute;
-            left: 5px;
-            top: 2px;
-            width: 4px;
-            height: 8px;
-            border: solid #3498db;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-
-        .selection-count {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .bulk-action-buttons {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .bulk-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .bulk-btn-primary {
-            background: white;
-            color: #3498db;
-        }
-
-        .bulk-btn-primary:hover:not(:disabled) {
-            background: #ecf0f1;
-            transform: translateY(-1px);
-        }
-
-        .bulk-btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .bulk-btn-secondary {
-            background: transparent;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .bulk-btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: white;
-        }
-
-        /* Result item checkbox styles */
-        .result-checkbox {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 10;
-        }
-
-        .result-checkbox input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: #3498db;
-        }
-
-        .result-item {
-            position: relative;
-            padding-left: 50px; /* Make room for checkbox */
-        }
-
-        .result-item.selected {
-            background-color: #e3f2fd;
-            border-left: 4px solid #3498db;
-        }
-
-        .result-item:hover .result-checkbox {
-            opacity: 1;
-        }
-
-        .result-checkbox {
-            opacity: 0.6;
-            transition: opacity 0.2s ease;
-        }
-
-        .result-item.selected .result-checkbox {
-            opacity: 1;
-        }
-
-        .result-content {
-            flex: 1;
-            cursor: pointer;
-        }
-
-        .custom-fields {
-            margin-top: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .custom-field {
-            background: #ecf0f1;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            color: #2c3e50;
-        }
-
-        .clickable-field {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .clickable-field:hover {
-            background-color: var(--accent-color);
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px var(--shadow);
-        }
-
-        .status-badge.clickable-field:hover,
-        .priority-badge.clickable-field:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px var(--shadow);
-            opacity: 0.9;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-
-        .error {
-            background: #e74c3c;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-
-        .query-info {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin-bottom: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .search-container {
-                padding: 20px;
-            }
-            
-            .result-meta {
-                flex-direction: column;
-                gap: 5px;
-            }
-        }
+        /* Custom component styles */
+        .status-badge.open { @apply bg-red-500 text-white; }
+        .status-badge.progress { @apply bg-orange-500 text-white; }
+        .status-badge.done { @apply bg-green-500 text-white; }
+        .status-badge.default { @apply bg-gray-500 text-white; }
+
+        .priority-badge.highest { @apply bg-red-700 text-white; }
+        .priority-badge.high { @apply bg-red-500 text-white; }
+        .priority-badge.medium { @apply bg-orange-500 text-white; }
+        .priority-badge.low { @apply bg-green-500 text-white; }
+        .priority-badge.lowest { @apply bg-green-600 text-white; }
+        .priority-badge.default { @apply bg-gray-500 text-white; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <button class="theme-toggle" onclick="toggleTheme()">
+<body class="font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div class="max-w-6xl mx-auto px-5 py-5">
+        <div class="text-center mb-10 relative">
+            <button class="absolute top-0 right-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2 cursor-pointer text-sm transition-all duration-300 flex items-center gap-2 hover:bg-blue-500 hover:text-white hover:border-blue-500" onclick="toggleTheme()">
                 <span id="themeIcon">🌙</span>
                 <span id="themeText">Dark Mode</span>
             </button>
-            <h1>🔍 Jira Search Mirror</h1>
-            <div class="stats">
+            <h1 class="text-4xl font-light mb-2">🔍 Jira Search Mirror</h1>
+            <div class="text-gray-600 dark:text-gray-400 text-sm mb-5">
                 {% if stats %}
                     {{ stats.total_issues }} issues indexed
                     {% if stats.last_sync %}
@@ -813,124 +54,124 @@
             </div>
         </div>
 
-        <div class="search-container">
-            <div class="suggestions-container">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8">
+            <div class="relative">
                 <input type="text" 
                        id="searchBox" 
-                       class="search-box" 
+                       class="w-full p-4 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-full outline-none transition-colors duration-300 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500" 
                        placeholder="Search issues... (try team names like 'ACS', work types like 'Quality', or any text)"
                        autocomplete="off">
                 
-                <div id="suggestionsDropdown" class="suggestions-dropdown"></div>
+                <div id="suggestionsDropdown" class="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 border-t-0 rounded-b-lg shadow-lg max-h-80 overflow-y-auto z-50 hidden"></div>
             </div>
             
-            <div id="searchHelp" class="search-help" style="display: none;">
-                <div class="search-examples">
-                    <div class="example-section">
-                        <strong>Natural Language Examples:</strong>
-                        <ul>
-                            <li><code>ACS automation team quality</code> - Find issues with these keywords</li>
-                            <li><code>security vulnerability</code> - Search across all text fields</li>
-                            <li><code>documentation</code> - Find docs-related issues</li>
+            <div id="searchHelp" class="mt-4 p-5 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-blue-500 text-sm hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+                        <strong class="text-gray-800 dark:text-gray-200 block mb-2">Natural Language Examples:</strong>
+                        <ul class="ml-5 space-y-1">
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">ACS automation team quality</code> - Find issues with these keywords</li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">security vulnerability</code> - Search across all text fields</li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">documentation</code> - Find docs-related issues</li>
                         </ul>
                     </div>
-                    <div class="example-section">
-                        <strong>JQL Examples:</strong>
-                        <ul>
-                            <li><code>project = ROX AND status = "In Progress"</code></li>
-                            <li><code>assignee = "John Doe" AND priority = High</code></li>
-                            <li><code>team = "ACS Automation" AND status != Done</code></li>
-                            <li><code>created >= "2025-01-01"</code></li>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+                        <strong class="text-gray-800 dark:text-gray-200 block mb-2">JQL Examples:</strong>
+                        <ul class="ml-5 space-y-1">
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">project = ROX AND status = "In Progress"</code></li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">assignee = "John Doe" AND priority = High</code></li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">team = "ACS Automation" AND status != Done</code></li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">created >= "2025-01-01"</code></li>
                         </ul>
                     </div>
-                    <div class="example-section">
-                        <strong>Regex Examples:</strong>
-                        <ul>
-                            <li><code>ROX-\d{5}</code> - Find issues with 5-digit numbers</li>
-                            <li><code>(critical|blocker).*security</code> - Critical security issues</li>
-                            <li><code>^[Ff]ix.*[Bb]ug</code> - Issues starting with "Fix" and containing "bug"</li>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-600">
+                        <strong class="text-gray-800 dark:text-gray-200 block mb-2">Regex Examples:</strong>
+                        <ul class="ml-5 space-y-1">
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">ROX-\d{5}</code> - Find issues with 5-digit numbers</li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">(critical|blocker).*security</code> - Critical security issues</li>
+                            <li><code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-xs">^[Ff]ix.*[Bb]ug</code> - Issues starting with "Fix" and containing "bug"</li>
                         </ul>
                     </div>
                 </div>
             </div>
             
-            <div class="search-modes">
-                <button class="search-mode active" data-mode="natural">Natural Language</button>
-                <button class="search-mode" data-mode="jql">JQL</button>
-                <button class="search-mode" data-mode="regex">Regex</button>
-                <button class="search-mode" data-mode="help" style="margin-left: auto;">❓ Examples</button>
+            <div class="flex justify-center gap-2 mt-4">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-full cursor-pointer transition-all duration-300 text-sm bg-blue-500 text-white border-blue-500 search-mode active" data-mode="natural">Natural Language</button>
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-full cursor-pointer transition-all duration-300 text-sm hover:bg-blue-500 hover:text-white search-mode" data-mode="jql">JQL</button>
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-full cursor-pointer transition-all duration-300 text-sm hover:bg-blue-500 hover:text-white search-mode" data-mode="regex">Regex</button>
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-full cursor-pointer transition-all duration-300 text-sm hover:bg-blue-500 hover:text-white ml-auto search-mode" data-mode="help">❓ Examples</button>
             </div>
             
-            <div id="validationMessage" class="validation-message"></div>
+            <div id="validationMessage" class="mt-2 p-2 rounded text-xs hidden"></div>
         </div>
 
         <!-- Bulk Actions Toolbar -->
-        <div id="bulkActionsBar" class="bulk-actions-bar" style="display: none;">
-            <div class="bulk-actions-content">
-                <div class="bulk-selection-controls">
-                    <label class="bulk-select-all">
-                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
-                        <span class="checkmark"></span>
+        <div id="bulkActionsBar" class="bg-blue-500 text-white p-3 mb-5 rounded-lg shadow-lg hidden">
+            <div class="max-w-6xl mx-auto px-5 flex justify-between items-center flex-wrap gap-4">
+                <div class="flex items-center gap-5">
+                    <label class="flex items-center gap-2 cursor-pointer font-medium select-none">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" class="hidden">
+                        <span class="w-4 h-4 border-2 border-white rounded inline-block relative transition-all duration-200"></span>
                         Select All
                     </label>
-                    <span id="selectionCount" class="selection-count">0 issues selected</span>
+                    <span id="selectionCount" class="text-sm text-blue-100">0 issues selected</span>
                 </div>
                 
-                <div class="bulk-action-buttons">
-                    <button id="clearSelectionBtn" class="bulk-btn bulk-btn-secondary" onclick="clearAllSelections()">
+                <div class="flex gap-2 items-center">
+                    <button id="clearSelectionBtn" class="px-4 py-2 bg-transparent text-white border border-white/50 rounded-md transition-all duration-200 hover:bg-white/10 hover:border-white" onclick="clearAllSelections()">
                         Clear Selection
                     </button>
-                    <button id="bulkEditBtn" class="bulk-btn bulk-btn-primary" onclick="openBulkEdit()" disabled>
+                    <button id="bulkEditBtn" class="px-4 py-2 bg-white text-blue-500 rounded-md font-medium transition-all duration-200 hover:bg-gray-100 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed" onclick="openBulkEdit()" disabled>
                         🔗 Bulk Edit in Jira
                     </button>
                 </div>
             </div>
         </div>
 
-        <div id="resultsContainer" class="results-container" style="display: none;">
-            <div class="results-header">
-                <div id="resultsInfo" class="query-info"></div>
+        <div id="resultsContainer" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hidden">
+            <div class="p-5 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-medium">
+                <div id="resultsInfo" class="text-sm text-gray-600 dark:text-gray-400 mb-2"></div>
             </div>
-            <div id="resultsList" class="results-list"></div>
+            <div id="resultsList" class="space-y-0"></div>
         </div>
 
-        <div id="noResults" class="no-results" style="display: none;">
-            <h3>No issues found</h3>
+        <div id="noResults" class="text-center p-10 text-gray-500 dark:text-gray-400 hidden">
+            <h3 class="text-lg mb-2">No issues found</h3>
             <p>Try a different search query or check your spelling.</p>
         </div>
     </div>
 
     <!-- Issue Detail Modal -->
-    <div id="issueModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle" class="modal-title">Loading...</h2>
-                <button class="modal-close" onclick="closeIssueModal()">&times;</button>
+    <div id="issueModal" class="fixed inset-0 bg-black/50 dark:bg-black/70 hidden z-50 flex items-center justify-center p-5">
+        <div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+            <div class="p-5 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center bg-gray-50 dark:bg-gray-700 rounded-t-xl">
+                <h2 id="modalTitle" class="flex-1 m-0 text-xl text-gray-800 dark:text-gray-200">Loading...</h2>
+                <button class="bg-none border-none text-2xl cursor-pointer text-gray-500 dark:text-gray-400 p-0 ml-5 hover:text-gray-800 dark:hover:text-gray-200" onclick="closeIssueModal()">&times;</button>
             </div>
             
-            <div class="modal-body">
-                <div id="modalLoading" class="loading">🔍 Loading issue details...</div>
-                <div id="modalContent" style="display: none;">
-                    <div class="issue-meta" id="issueMeta"></div>
+            <div class="p-6">
+                <div id="modalLoading" class="text-center p-10 text-gray-500 dark:text-gray-400">🔍 Loading issue details...</div>
+                <div id="modalContent" class="hidden">
+                    <div id="issueMeta" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"></div>
                     
-                    <div class="issue-description">
-                        <h3>📝 Description</h3>
-                        <div id="issueDescription" class="issue-description-content">No description</div>
+                    <div class="mb-6">
+                        <h3 class="mb-3 text-gray-800 dark:text-gray-200 text-lg">📝 Description</h3>
+                        <div id="issueDescription" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg whitespace-pre-wrap font-sans leading-relaxed max-h-80 overflow-y-auto text-gray-900 dark:text-gray-100">No description</div>
                     </div>
                     
-                    <div class="issue-comments">
-                        <h3>💬 Comments</h3>
-                        <div id="issueComments" class="comments-content">No comments</div>
+                    <div class="mb-6">
+                        <h3 class="mb-3 text-gray-800 dark:text-gray-200 text-lg">💬 Comments</h3>
+                        <div id="issueComments" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg whitespace-pre-wrap font-sans leading-relaxed max-h-52 overflow-y-auto text-gray-900 dark:text-gray-100">No comments</div>
                     </div>
                 </div>
             </div>
             
-            <div class="modal-actions">
-                <div class="modal-nav">
-                    <button id="prevIssueBtn" class="modal-nav-btn" onclick="navigateIssue(-1)">⬅️ Previous</button>
-                    <button id="nextIssueBtn" class="modal-nav-btn" onclick="navigateIssue(1)">Next ➡️</button>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-600 flex justify-between items-center bg-gray-50 dark:bg-gray-700 rounded-b-xl">
+                <div class="flex gap-2">
+                    <button id="prevIssueBtn" class="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="navigateIssue(-1)">⬅️ Previous</button>
+                    <button id="nextIssueBtn" class="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="navigateIssue(1)">Next ➡️</button>
                 </div>
-                <a id="jiraLink" class="jira-link" href="#" target="_blank">🔗 Open in Jira</a>
+                <a id="jiraLink" class="px-5 py-2 bg-blue-500 text-white no-underline rounded-md font-medium transition-colors duration-200 hover:bg-blue-600" href="#" target="_blank">🔗 Open in Jira</a>
             </div>
         </div>
     </div>
@@ -963,15 +204,23 @@
         // Theme management
         function initializeTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
             updateThemeButton(savedTheme);
         }
 
         function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
             
-            document.documentElement.setAttribute('data-theme', newTheme);
+            if (newTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
             localStorage.setItem('theme', newTheme);
             updateThemeButton(newTheme);
         }
@@ -1078,11 +327,11 @@
                     
                     if (mode === 'help') {
                         // Toggle help display
-                        if (searchHelp.style.display === 'none') {
-                            searchHelp.style.display = 'block';
+                        if (searchHelp.classList.contains('hidden')) {
+                            searchHelp.classList.remove('hidden');
                             this.textContent = '❌ Hide Examples';
                         } else {
-                            searchHelp.style.display = 'none';
+                            searchHelp.classList.add('hidden');
                             this.textContent = '❓ Examples';
                         }
                         return;
@@ -1160,19 +409,19 @@
             const validationDiv = document.getElementById('validationMessage');
             
             if (isValid) {
-                validationDiv.className = 'validation-message success';
+                validationDiv.className = 'mt-2 p-2 rounded text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800';
                 validationDiv.textContent = '✓ Query syntax is valid';
             } else {
-                validationDiv.className = 'validation-message error';
+                validationDiv.className = 'mt-2 p-2 rounded text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800';
                 validationDiv.textContent = `✗ ${errorMessage}`;
             }
             
-            validationDiv.style.display = 'block';
+            validationDiv.classList.remove('hidden');
         }
 
         function hideValidation() {
             const validationDiv = document.getElementById('validationMessage');
-            validationDiv.style.display = 'none';
+            validationDiv.classList.add('hidden');
         }
 
         // Type-ahead suggestions functionality
@@ -1209,34 +458,34 @@
             }
 
             dropdown.innerHTML = suggestions.map((suggestion, index) => `
-                <div class="suggestion-item" data-value="${escapeHtml(suggestion.value)}" data-index="${index}">
-                    <span class="suggestion-icon">${suggestion.icon}</span>
-                    <span class="suggestion-label">${escapeHtml(suggestion.label)}</span>
-                    <span class="suggestion-type">${suggestion.type.replace('_', ' ')}</span>
+                <div class="p-3 cursor-pointer border-b border-gray-200 dark:border-gray-600 transition-colors duration-200 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 last:border-b-0" data-value="${escapeHtml(suggestion.value)}" data-index="${index}">
+                    <span class="text-sm w-5 text-center">${suggestion.icon}</span>
+                    <span class="flex-1 text-sm text-gray-800 dark:text-gray-200">${escapeHtml(suggestion.label)}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">${suggestion.type.replace('_', ' ')}</span>
                 </div>
             `).join('');
 
             // Add click handlers
-            dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+            dropdown.querySelectorAll('[data-value]').forEach(item => {
                 item.addEventListener('click', () => selectSuggestion(item));
             });
 
-            dropdown.style.display = 'block';
+            dropdown.classList.remove('hidden');
             currentSuggestionIndex = -1;
         }
 
         function hideSuggestions() {
             const dropdown = document.getElementById('suggestionsDropdown');
-            dropdown.style.display = 'none';
+            dropdown.classList.add('hidden');
             currentSuggestionIndex = -1;
         }
 
         function highlightSuggestion(suggestions) {
             suggestions.forEach((item, index) => {
                 if (index === currentSuggestionIndex) {
-                    item.classList.add('highlighted');
+                    item.classList.add('bg-blue-100', 'dark:bg-blue-900');
                 } else {
-                    item.classList.remove('highlighted');
+                    item.classList.remove('bg-blue-100', 'dark:bg-blue-900');
                 }
             });
         }
@@ -1262,10 +511,10 @@
             updateModalNavigation();
             
             // Show modal with loading state
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
             modalTitle.textContent = issueKey;
-            modalLoading.style.display = 'block';
-            modalContent.style.display = 'none';
+            modalLoading.classList.remove('hidden');
+            modalContent.classList.add('hidden');
             
             try {
                 const response = await fetch(`/api/issues/${issueKey}`);
@@ -1297,70 +546,70 @@
             
             // Update metadata
             issueMeta.innerHTML = `
-                <div class="meta-item">
-                    <div class="meta-label">Status</div>
-                    <div class="meta-value">
-                        <span class="status-badge ${getStatusClass(issue.status.name)} clickable-field"
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Status</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium uppercase status-badge ${getStatusClass(issue.status.name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                               onclick="searchByField('status', '${issue.status.name}'); closeIssueModal();"
                               title="Click to filter by status: ${issue.status.name}">${issue.status.name}</span>
                     </div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Priority</div>
-                    <div class="meta-value">
-                        <span class="priority-badge ${getPriorityClass(issue.priority.name)} clickable-field"
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Priority</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium priority-badge ${getPriorityClass(issue.priority.name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                               onclick="searchByField('priority', '${issue.priority.name}'); closeIssueModal();"
                               title="Click to filter by priority: ${issue.priority.name}">${issue.priority.name || 'None'}</span>
                     </div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Assignee</div>
-                    <div class="meta-value">
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Assignee</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">
                         ${issue.assignee.display_name ? 
-                          `<span class="clickable-field" 
+                          `<span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer" 
                                  onclick="searchByField('assignee', '${escapeHtml(issue.assignee.display_name)}'); closeIssueModal();"
                                  title="Click to filter by assignee: ${escapeHtml(issue.assignee.display_name)}">${escapeHtml(issue.assignee.display_name)}</span>` 
                           : 'Unassigned'}
                     </div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Reporter</div>
-                    <div class="meta-value">
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Reporter</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">
                         ${issue.reporter.display_name ? 
-                          `<span class="clickable-field"
+                          `<span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
                                  onclick="searchByField('reporter', '${escapeHtml(issue.reporter.display_name)}'); closeIssueModal();"
                                  title="Click to filter by reporter: ${escapeHtml(issue.reporter.display_name)}">${escapeHtml(issue.reporter.display_name)}</span>` 
                           : 'Unknown'}
                     </div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Created</div>
-                    <div class="meta-value">${formatDate(issue.created)}</div>
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Created</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">${formatDate(issue.created)}</div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Updated</div>
-                    <div class="meta-value">${formatDate(issue.updated)}</div>
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Updated</div>
+                    <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">${formatDate(issue.updated)}</div>
                 </div>
                 ${issue.custom_fields.team ? `
-                    <div class="meta-item">
-                        <div class="meta-label">Team</div>
-                        <div class="meta-value">👥 <span class="clickable-field"
+                    <div class="flex flex-col gap-1">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Team</div>
+                        <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">👥 <span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
                                                         onclick="searchByField('team', '${escapeHtml(issue.custom_fields.team)}'); closeIssueModal();"
                                                         title="Click to filter by team: ${escapeHtml(issue.custom_fields.team)}">${escapeHtml(issue.custom_fields.team)}</span></div>
                     </div>
                 ` : ''}
                 ${issue.custom_fields.work_type ? `
-                    <div class="meta-item">
-                        <div class="meta-label">Work Type</div>
-                        <div class="meta-value">🔧 <span class="clickable-field"
+                    <div class="flex flex-col gap-1">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Work Type</div>
+                        <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">🔧 <span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
                                                          onclick="searchByField('work_type', '${escapeHtml(issue.custom_fields.work_type)}'); closeIssueModal();"
                                                          title="Click to filter by work type: ${escapeHtml(issue.custom_fields.work_type)}">${escapeHtml(issue.custom_fields.work_type)}</span></div>
                     </div>
                 ` : ''}
                 ${issue.custom_fields.px_impact_score ? `
-                    <div class="meta-item">
-                        <div class="meta-label">PX Impact Score</div>
-                        <div class="meta-value">📊 ${issue.custom_fields.px_impact_score}</div>
+                    <div class="flex flex-col gap-1">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">PX Impact Score</div>
+                        <div class="text-sm text-gray-800 dark:text-gray-200 font-medium">📊 ${issue.custom_fields.px_impact_score}</div>
                     </div>
                 ` : ''}
             `;
@@ -1379,8 +628,8 @@
             jiraLink.href = issue.jira_url;
             
             // Show content
-            modalLoading.style.display = 'none';
-            modalContent.style.display = 'block';
+            modalLoading.classList.add('hidden');
+            modalContent.classList.remove('hidden');
         }
 
         function showModalError(message) {
@@ -1390,7 +639,7 @@
 
         function closeIssueModal() {
             const modal = document.getElementById('issueModal');
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
             currentIssueIndex = -1;
         }
 
@@ -1456,55 +705,56 @@
             currentSearchResults = data.results;
             
             if (data.results.length === 0) {
-                container.style.display = 'none';
-                noResults.style.display = 'block';
+                container.classList.add('hidden');
+                noResults.classList.remove('hidden');
                 return;
             }
             
-            noResults.style.display = 'none';
-            container.style.display = 'block';
+            noResults.classList.add('hidden');
+            container.classList.remove('hidden');
             
             // Update results info
             info.innerHTML = `Found ${data.total} results for "<mark>${escapeHtml(query)}</mark>" in ${data.query_time_ms}ms`;
             
             // Generate results HTML with highlighting and checkboxes
             list.innerHTML = data.results.map(result => `
-                <div class="result-item ${selectedIssues.has(result.key) ? 'selected' : ''}" data-issue-key="${result.key}">
-                    <div class="result-checkbox">
+                <div class="relative p-5 border-b border-gray-200 dark:border-gray-600 transition-colors duration-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${selectedIssues.has(result.key) ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}" data-issue-key="${result.key}">
+                    <div class="absolute top-4 left-4 z-10">
                         <input type="checkbox" 
                                ${selectedIssues.has(result.key) ? 'checked' : ''}
                                onchange="toggleIssueSelection('${result.key}')"
-                               onclick="event.stopPropagation()">
+                               onclick="event.stopPropagation()"
+                               class="w-4 h-4 cursor-pointer accent-blue-500 opacity-60 hover:opacity-100 transition-opacity duration-200 ${selectedIssues.has(result.key) ? 'opacity-100' : ''}">
                     </div>
-                    <div class="result-content" onclick="openIssue('${result.key}')">
-                        <div class="result-key">${result.key}</div>
-                        <div class="result-summary">${escapeHtml(result.summary)}</div>
-                    <div class="result-meta">
-                        <div class="result-meta-item">
-                            <span class="status-badge ${getStatusClass(result.status_name)} clickable-field" 
-                                  onclick="searchByField('status', '${result.status_name}'); event.stopPropagation();"
-                                  title="Click to filter by status: ${result.status_name}">${result.status_name || 'Unknown'}</span>
-                        </div>
-                        ${result.priority_name ? `
-                            <div class="result-meta-item">
-                                <span class="priority-badge ${getPriorityClass(result.priority_name)} clickable-field"
-                                      onclick="searchByField('priority', '${result.priority_name}'); event.stopPropagation();"
-                                      title="Click to filter by priority: ${result.priority_name}">${result.priority_name}</span>
+                    <div class="flex-1 cursor-pointer pl-8" onclick="openIssue('${result.key}')">
+                        <div class="font-semibold text-blue-500 dark:text-blue-400 mb-1 text-sm">${result.key}</div>
+                        <div class="text-base mb-2 leading-snug text-gray-900 dark:text-gray-100">${escapeHtml(result.summary)}</div>
+                        <div class="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
+                            <div class="flex items-center gap-1">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium uppercase status-badge ${getStatusClass(result.status_name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer" 
+                                      onclick="searchByField('status', '${result.status_name}'); event.stopPropagation();"
+                                      title="Click to filter by status: ${result.status_name}">${result.status_name || 'Unknown'}</span>
                             </div>
-                        ` : ''}
-                        ${result.assignee_display_name ? `
-                            <div class="result-meta-item">
-                                👤 <span class="clickable-field" 
-                                         onclick="searchByField('assignee', '${escapeHtml(result.assignee_display_name)}'); event.stopPropagation();"
-                                         title="Click to filter by assignee: ${escapeHtml(result.assignee_display_name)}">${escapeHtml(result.assignee_display_name)}</span>
+                            ${result.priority_name ? `
+                                <div class="flex items-center gap-1">
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium priority-badge ${getPriorityClass(result.priority_name)} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                                          onclick="searchByField('priority', '${result.priority_name}'); event.stopPropagation();"
+                                          title="Click to filter by priority: ${result.priority_name}">${result.priority_name}</span>
+                                </div>
+                            ` : ''}
+                            ${result.assignee_display_name ? `
+                                <div class="flex items-center gap-1">
+                                    👤 <span class="hover:bg-blue-500 hover:text-white hover:px-2 hover:py-0.5 hover:rounded hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer" 
+                                             onclick="searchByField('assignee', '${escapeHtml(result.assignee_display_name)}'); event.stopPropagation();"
+                                             title="Click to filter by assignee: ${escapeHtml(result.assignee_display_name)}">${escapeHtml(result.assignee_display_name)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="flex items-center gap-1">
+                                📅 ${formatDate(result.updated)}
                             </div>
-                        ` : ''}
-                        <div class="result-meta-item">
-                            📅 ${formatDate(result.updated)}
-                        </div>
-                        <div class="result-meta-item">
-                            📁 ${result.project_key}
-                        </div>
+                            <div class="flex items-center gap-1">
+                                📁 ${result.project_key}
+                            </div>
                         </div>
                         ${generateCustomFields(result.custom_fields)}
                     </div>
@@ -1516,23 +766,23 @@
             const fields = [];
             
             if (customFields.team) {
-                fields.push(`<span class="custom-field clickable-field" 
+                fields.push(`<span class="bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer" 
                                    onclick="searchByField('team', '${escapeHtml(customFields.team)}'); event.stopPropagation();"
                                    title="Click to filter by team: ${escapeHtml(customFields.team)}">👥 ${escapeHtml(customFields.team)}</span>`);
             }
             if (customFields.work_type) {
-                fields.push(`<span class="custom-field clickable-field"
+                fields.push(`<span class="bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
                                    onclick="searchByField('work_type', '${escapeHtml(customFields.work_type)}'); event.stopPropagation();"
                                    title="Click to filter by work type: ${escapeHtml(customFields.work_type)}">🔧 ${escapeHtml(customFields.work_type)}</span>`);
             }
             if (customFields.product_manager) {
-                fields.push(`<span class="custom-field">👨‍💼 ${escapeHtml(customFields.product_manager)}</span>`);
+                fields.push(`<span class="bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-xs text-gray-700 dark:text-gray-300">👨‍💼 ${escapeHtml(customFields.product_manager)}</span>`);
             }
             if (customFields.px_impact_score) {
-                fields.push(`<span class="custom-field">📊 Impact: ${customFields.px_impact_score}</span>`);
+                fields.push(`<span class="bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-xs text-gray-700 dark:text-gray-300">📊 Impact: ${customFields.px_impact_score}</span>`);
             }
             
-            return fields.length > 0 ? `<div class="custom-fields">${fields.join('')}</div>` : '';
+            return fields.length > 0 ? `<div class="mt-2 flex flex-wrap gap-2">${fields.join('')}</div>` : '';
         }
 
 
@@ -1578,9 +828,9 @@
             const list = document.getElementById('resultsList');
             const noResults = document.getElementById('noResults');
             
-            noResults.style.display = 'none';
-            container.style.display = 'block';
-            list.innerHTML = '<div class="loading">🔍 Searching...</div>';
+            noResults.classList.add('hidden');
+            container.classList.remove('hidden');
+            list.innerHTML = '<div class="text-center p-10 text-gray-500 dark:text-gray-400">🔍 Searching...</div>';
         }
 
         function showError(message) {
@@ -1588,17 +838,17 @@
             const list = document.getElementById('resultsList');
             const noResults = document.getElementById('noResults');
             
-            noResults.style.display = 'none';
-            container.style.display = 'block';
-            list.innerHTML = `<div class="error">❌ ${escapeHtml(message)}</div>`;
+            noResults.classList.add('hidden');
+            container.classList.remove('hidden');
+            list.innerHTML = `<div class="bg-red-500 text-white p-4 rounded-lg m-5">❌ ${escapeHtml(message)}</div>`;
         }
 
         function hideResults() {
             const container = document.getElementById('resultsContainer');
             const noResults = document.getElementById('noResults');
             
-            container.style.display = 'none';
-            noResults.style.display = 'none';
+            container.classList.add('hidden');
+            noResults.classList.add('hidden');
         }
 
         // Bulk Selection Functions
@@ -1639,10 +889,10 @@
             
             // Show/hide bulk actions bar
             if (selectedCount > 0 && !bulkActionsVisible) {
-                bulkActionsBar.style.display = 'block';
+                bulkActionsBar.classList.remove('hidden');
                 bulkActionsVisible = true;
             } else if (selectedCount === 0 && bulkActionsVisible) {
-                bulkActionsBar.style.display = 'none';
+                bulkActionsBar.classList.add('hidden');
                 bulkActionsVisible = false;
             }
             
