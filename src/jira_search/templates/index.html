@@ -188,6 +188,55 @@
         let bulkActionsVisible = false;
         let jiraBaseUrl = 'https://issues.redhat.com'; // Default, will be updated from config
 
+        // URL state management
+        function updateURLWithSearch(query, mode) {
+            const url = new URL(window.location);
+            if (query && query.trim()) {
+                url.searchParams.set('q', query);
+                url.searchParams.set('mode', mode);
+            } else {
+                url.searchParams.delete('q');
+                url.searchParams.delete('mode');
+            }
+            window.history.pushState({}, '', url);
+        }
+
+        function getSearchFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                query: params.get('q') || '',
+                mode: params.get('mode') || 'natural'
+            };
+        }
+
+        function initializeFromURL() {
+            const urlState = getSearchFromURL();
+            if (urlState.query) {
+                // Set the search mode
+                setSearchMode(urlState.mode);
+                
+                // Set the search query
+                const searchBox = document.getElementById('searchBox');
+                searchBox.value = urlState.query;
+                
+                // Perform the search
+                performSearch(urlState.query);
+            }
+        }
+
+        function setSearchMode(mode) {
+            const modeButtons = document.querySelectorAll('.search-mode');
+            modeButtons.forEach(btn => {
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                    currentMode = mode;
+                } else if (btn.dataset.mode !== 'help') {
+                    btn.classList.remove('active');
+                }
+            });
+            updatePlaceholder();
+        }
+
         // Load configuration on page load
         async function loadConfig() {
             try {
@@ -245,6 +294,9 @@
             
             // Load configuration first
             loadConfig();
+            
+            // Initialize from URL parameters
+            initializeFromURL();
             
             const searchBox = document.getElementById('searchBox');
             const modeButtons = document.querySelectorAll('.search-mode');
@@ -360,6 +412,8 @@
                         performSearch(query);
                     } else {
                         hideValidation();
+                        // Update URL to reflect mode change even without query
+                        updateURLWithSearch('', currentMode);
                     }
                 });
             });
@@ -373,6 +427,27 @@
                     }
                 }
             });
+        });
+
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', function(e) {
+            const urlState = getSearchFromURL();
+            const searchBox = document.getElementById('searchBox');
+            
+            // Update search mode
+            setSearchMode(urlState.mode);
+            
+            // Update search box value
+            searchBox.value = urlState.query;
+            
+            // Perform search if there's a query, otherwise clear results
+            if (urlState.query) {
+                performSearch(urlState.query, false); // false = don't update URL again
+            } else {
+                hideResults();
+                hideValidation();
+                hideSuggestions();
+            }
         });
 
         function updatePlaceholder() {
@@ -668,11 +743,16 @@
             openIssueModal(issueKey, issueIndex);
         }
 
-        async function performSearch(query) {
+        async function performSearch(query, updateURL = true) {
             const startTime = Date.now();
             
             try {
                 showLoading();
+                
+                // Update URL if requested (default behavior)
+                if (updateURL) {
+                    updateURLWithSearch(query, currentMode);
+                }
                 
                 const params = new URLSearchParams({
                     q: query,
