@@ -37,7 +37,10 @@ JQL_FIELD_MAPPING = {
     'description': 'description',
     'reporter': 'reporter_display_name',
     'type': 'issue_type',
+    'issuetype': 'issue_type',
     'key': 'key',
+    'labels': 'labels',
+    'components': 'components',
     # Custom fields
     'team': 'custom_12313240',
     'work_type': 'custom_12320040',
