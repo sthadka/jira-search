@@ -49,6 +49,18 @@ class Config:
     def _substitute_env_vars(self, content: str) -> str:
         """Substitute environment variables in config content."""
         def replace_env_var(match):
+            # Get the full match and check if it's in a comment
+            full_match = match.group(0)
+            start_pos = match.start()
+            
+            # Find the start of the line
+            line_start = content.rfind('\n', 0, start_pos) + 1
+            line_before_match = content[line_start:start_pos]
+            
+            # If there's a # before the match on the same line, skip substitution
+            if '#' in line_before_match:
+                return full_match
+            
             var_expr = match.group(1)
             if ':' in var_expr:
                 var_name, default_value = var_expr.split(':', 1)
