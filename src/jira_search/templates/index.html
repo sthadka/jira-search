@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jira Search Mirror</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:ital,wght@0,300..700;1,300..700&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Light mode colors */
@@ -42,7 +45,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Red Hat Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
@@ -196,12 +199,12 @@
         }
 
         .example-section code {
-            background: #ecf0f1;
+            background: var(--bg-color);
             padding: 2px 4px;
             border-radius: 3px;
-            font-family: 'Monaco', 'Courier New', monospace;
+            font-family: 'IBM Plex Mono', 'Monaco', 'Courier New', monospace;
             font-size: 12px;
-            color: #2c3e50;
+            color: var(--text-color);
         }
 
         .validation-message {
@@ -480,8 +483,7 @@
         }
 
         .results-list {
-            max-height: 600px;
-            overflow-y: auto;
+            /* Use browser scrolling instead of inner scrollbar */
         }
 
         .result-item {
@@ -726,6 +728,25 @@
             border-radius: 12px;
             font-size: 11px;
             color: #2c3e50;
+        }
+
+        .clickable-field {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .clickable-field:hover {
+            background-color: var(--accent-color);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .status-badge.clickable-field:hover,
+        .priority-badge.clickable-field:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px var(--shadow);
+            opacity: 0.9;
         }
 
         .loading {
@@ -1279,22 +1300,38 @@
                 <div class="meta-item">
                     <div class="meta-label">Status</div>
                     <div class="meta-value">
-                        <span class="status-badge ${getStatusClass(issue.status.name)}">${issue.status.name}</span>
+                        <span class="status-badge ${getStatusClass(issue.status.name)} clickable-field"
+                              onclick="searchByField('status', '${issue.status.name}'); closeIssueModal();"
+                              title="Click to filter by status: ${issue.status.name}">${issue.status.name}</span>
                     </div>
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Priority</div>
                     <div class="meta-value">
-                        <span class="priority-badge ${getPriorityClass(issue.priority.name)}">${issue.priority.name || 'None'}</span>
+                        <span class="priority-badge ${getPriorityClass(issue.priority.name)} clickable-field"
+                              onclick="searchByField('priority', '${issue.priority.name}'); closeIssueModal();"
+                              title="Click to filter by priority: ${issue.priority.name}">${issue.priority.name || 'None'}</span>
                     </div>
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Assignee</div>
-                    <div class="meta-value">${issue.assignee.display_name || 'Unassigned'}</div>
+                    <div class="meta-value">
+                        ${issue.assignee.display_name ? 
+                          `<span class="clickable-field" 
+                                 onclick="searchByField('assignee', '${escapeHtml(issue.assignee.display_name)}'); closeIssueModal();"
+                                 title="Click to filter by assignee: ${escapeHtml(issue.assignee.display_name)}">${escapeHtml(issue.assignee.display_name)}</span>` 
+                          : 'Unassigned'}
+                    </div>
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Reporter</div>
-                    <div class="meta-value">${issue.reporter.display_name || 'Unknown'}</div>
+                    <div class="meta-value">
+                        ${issue.reporter.display_name ? 
+                          `<span class="clickable-field"
+                                 onclick="searchByField('reporter', '${escapeHtml(issue.reporter.display_name)}'); closeIssueModal();"
+                                 title="Click to filter by reporter: ${escapeHtml(issue.reporter.display_name)}">${escapeHtml(issue.reporter.display_name)}</span>` 
+                          : 'Unknown'}
+                    </div>
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Created</div>
@@ -1307,13 +1344,17 @@
                 ${issue.custom_fields.team ? `
                     <div class="meta-item">
                         <div class="meta-label">Team</div>
-                        <div class="meta-value">👥 ${issue.custom_fields.team}</div>
+                        <div class="meta-value">👥 <span class="clickable-field"
+                                                        onclick="searchByField('team', '${escapeHtml(issue.custom_fields.team)}'); closeIssueModal();"
+                                                        title="Click to filter by team: ${escapeHtml(issue.custom_fields.team)}">${escapeHtml(issue.custom_fields.team)}</span></div>
                     </div>
                 ` : ''}
                 ${issue.custom_fields.work_type ? `
                     <div class="meta-item">
                         <div class="meta-label">Work Type</div>
-                        <div class="meta-value">🔧 ${issue.custom_fields.work_type}</div>
+                        <div class="meta-value">🔧 <span class="clickable-field"
+                                                         onclick="searchByField('work_type', '${escapeHtml(issue.custom_fields.work_type)}'); closeIssueModal();"
+                                                         title="Click to filter by work type: ${escapeHtml(issue.custom_fields.work_type)}">${escapeHtml(issue.custom_fields.work_type)}</span></div>
                     </div>
                 ` : ''}
                 ${issue.custom_fields.px_impact_score ? `
@@ -1440,16 +1481,22 @@
                         <div class="result-summary">${escapeHtml(result.summary)}</div>
                     <div class="result-meta">
                         <div class="result-meta-item">
-                            <span class="status-badge ${getStatusClass(result.status_name)}">${result.status_name || 'Unknown'}</span>
+                            <span class="status-badge ${getStatusClass(result.status_name)} clickable-field" 
+                                  onclick="searchByField('status', '${result.status_name}'); event.stopPropagation();"
+                                  title="Click to filter by status: ${result.status_name}">${result.status_name || 'Unknown'}</span>
                         </div>
                         ${result.priority_name ? `
                             <div class="result-meta-item">
-                                <span class="priority-badge ${getPriorityClass(result.priority_name)}">${result.priority_name}</span>
+                                <span class="priority-badge ${getPriorityClass(result.priority_name)} clickable-field"
+                                      onclick="searchByField('priority', '${result.priority_name}'); event.stopPropagation();"
+                                      title="Click to filter by priority: ${result.priority_name}">${result.priority_name}</span>
                             </div>
                         ` : ''}
                         ${result.assignee_display_name ? `
                             <div class="result-meta-item">
-                                👤 ${escapeHtml(result.assignee_display_name)}
+                                👤 <span class="clickable-field" 
+                                         onclick="searchByField('assignee', '${escapeHtml(result.assignee_display_name)}'); event.stopPropagation();"
+                                         title="Click to filter by assignee: ${escapeHtml(result.assignee_display_name)}">${escapeHtml(result.assignee_display_name)}</span>
                             </div>
                         ` : ''}
                         <div class="result-meta-item">
@@ -1469,10 +1516,14 @@
             const fields = [];
             
             if (customFields.team) {
-                fields.push(`<span class="custom-field">👥 ${escapeHtml(customFields.team)}</span>`);
+                fields.push(`<span class="custom-field clickable-field" 
+                                   onclick="searchByField('team', '${escapeHtml(customFields.team)}'); event.stopPropagation();"
+                                   title="Click to filter by team: ${escapeHtml(customFields.team)}">👥 ${escapeHtml(customFields.team)}</span>`);
             }
             if (customFields.work_type) {
-                fields.push(`<span class="custom-field">🔧 ${escapeHtml(customFields.work_type)}</span>`);
+                fields.push(`<span class="custom-field clickable-field"
+                                   onclick="searchByField('work_type', '${escapeHtml(customFields.work_type)}'); event.stopPropagation();"
+                                   title="Click to filter by work type: ${escapeHtml(customFields.work_type)}">🔧 ${escapeHtml(customFields.work_type)}</span>`);
             }
             if (customFields.product_manager) {
                 fields.push(`<span class="custom-field">👨‍💼 ${escapeHtml(customFields.product_manager)}</span>`);
@@ -1709,6 +1760,60 @@
                 }
             }
         });
+
+        // Search by field value (for clickable field filtering)
+        function searchByField(fieldType, fieldValue) {
+            const searchBox = document.getElementById('searchBox');
+            
+            // Clear any existing selections
+            clearAllSelections();
+            
+            // Create JQL query based on field type
+            let jqlQuery = '';
+            
+            switch(fieldType) {
+                case 'status':
+                    jqlQuery = `status = "${fieldValue}"`;
+                    break;
+                case 'priority':
+                    jqlQuery = `priority = "${fieldValue}"`;
+                    break;
+                case 'assignee':
+                    jqlQuery = `assignee = "${fieldValue}"`;
+                    break;
+                case 'reporter':
+                    jqlQuery = `reporter = "${fieldValue}"`;
+                    break;
+                case 'team':
+                    jqlQuery = `team = "${fieldValue}"`;
+                    break;
+                case 'work_type':
+                    jqlQuery = `"Work Type" = "${fieldValue}"`;
+                    break;
+                default:
+                    // Fall back to natural language search
+                    jqlQuery = fieldValue;
+            }
+            
+            // Set search mode to JQL for field-based searches
+            if (fieldType !== 'default') {
+                // Switch to JQL mode
+                const modeButtons = document.querySelectorAll('.search-mode');
+                modeButtons.forEach(btn => {
+                    if (btn.dataset.mode === 'jql') {
+                        btn.classList.add('active');
+                        currentMode = 'jql';
+                    } else if (btn.dataset.mode !== 'help') {
+                        btn.classList.remove('active');
+                    }
+                });
+                updatePlaceholder();
+            }
+            
+            // Update search box and perform search
+            searchBox.value = jqlQuery;
+            performSearch(jqlQuery);
+        }
 
         // Update displayResults to show bulk actions bar when results are displayed
         const originalDisplayResults = displayResults;
