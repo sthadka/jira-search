@@ -751,6 +751,56 @@ def status(ctx):
         sys.exit(1)
 
 
+@cli.command('reset-db')
+@click.option('--force', is_flag=True, help='Skip confirmation prompt')
+@click.pass_context
+def reset_database(ctx, force: bool):
+    """Drop and recreate the database (WARNING: This will delete all data!)."""
+    config_path = ctx.obj['config_path']
+    
+    try:
+        config = load_config(config_path)
+        db = Database(config)
+        
+        if db.exists():
+            # Show warning and confirm
+            click.echo("⚠️  WARNING: This will permanently delete all synced data!")
+            click.echo(f"Database file: {db.db_path}")
+            
+            if not force:
+                if not click.confirm("Are you sure you want to continue?"):
+                    click.echo("Operation cancelled.")
+                    return
+            
+            # Get current stats before deletion
+            try:
+                stats = db.get_statistics()
+                total_issues = stats.get('total_issues', 0)
+            except Exception:
+                total_issues = 0
+            
+            # Remove the database file
+            import os
+            if os.path.exists(db.db_path):
+                os.remove(db.db_path)
+                click.echo(f"✓ Deleted existing database ({total_issues} issues)")
+            
+        # Recreate the database
+        db.initialize()
+        click.echo("✓ Created new empty database")
+        click.echo()
+        click.echo("Next steps:")
+        click.echo("1. Run sync to populate with data: python -m jira_search sync")
+        click.echo("2. Start the web interface: python -m jira_search serve")
+        
+    except ConfigError as e:
+        click.echo(f"✗ Configuration error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Database reset failed: {e}", err=True)
+        sys.exit(1)
+
+
 @cli.command()
 @click.option('--port', default=8080, help='Port to run the web server on')
 @click.option('--host', default='127.0.0.1', help='Host to bind the web server to')

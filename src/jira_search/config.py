@@ -152,6 +152,27 @@ class Config:
                 if db_dir and not os.path.exists(db_dir):
                     warnings.append(f"Database directory does not exist: {db_dir}")
         
+        # Fields configuration validation
+        fields_config = self.data.get('fields', {})
+        if fields_config:
+            core_fields = fields_config.get('core')
+            if core_fields and not isinstance(core_fields, list):
+                errors.append("fields.core must be a list")
+            elif core_fields:
+                required_fields = ['key', 'summary']  # Minimum required
+                for req_field in required_fields:
+                    if req_field not in core_fields:
+                        errors.append(f"fields.core must include required field: {req_field}")
+            
+            search_fields = fields_config.get('search')
+            if search_fields and not isinstance(search_fields, list):
+                errors.append("fields.search must be a list")
+            elif search_fields and core_fields:
+                # Ensure all search fields are also in core fields
+                for search_field in search_fields:
+                    if search_field not in core_fields:
+                        warnings.append(f"Search field '{search_field}' is not in core fields list")
+        
         # Report validation results
         if warnings:
             import logging
@@ -219,6 +240,21 @@ class Config:
     def database_path(self) -> str:
         """Get database file path."""
         return self.data.get('database', {}).get('path', 'jira_search.db')
+    
+    @property
+    def core_fields(self) -> List[str]:
+        """Get list of core Jira fields to fetch and index."""
+        default_fields = [
+            'key', 'summary', 'description', 'status', 'priority',
+            'assignee', 'reporter', 'created', 'updated', 'comment', 'labels'
+        ]
+        return self.data.get('fields', {}).get('core', default_fields)
+    
+    @property
+    def search_fields(self) -> List[str]:
+        """Get list of fields to include in full-text search index."""
+        default_search_fields = ['key', 'summary', 'description', 'comment', 'labels']
+        return self.data.get('fields', {}).get('search', default_search_fields)
     
     def get_config_section(self, section: str, default: Optional[Dict] = None) -> Dict[str, Any]:
         """Get a configuration section with defaults."""
@@ -337,6 +373,33 @@ search:
 database:
   # Database file path (default: jira_search.db)
   path: "jira_search.db"
+
+# Field Configuration
+fields:
+  # Core Jira fields to fetch and store (required: key, summary)
+  core:
+    - "key"
+    - "summary"
+    - "description"
+    - "status"
+    - "priority"
+    - "assignee"
+    - "reporter"
+    - "created"
+    - "updated"
+    - "comment"
+    - "labels"           # New: Issue labels/tags
+    - "components"       # Optional: Project components
+    - "fixVersions"      # Optional: Fix versions
+    - "affectedVersions" # Optional: Affected versions
+  
+  # Fields to include in full-text search index (subset of core)
+  search:
+    - "key"
+    - "summary"
+    - "description"
+    - "comment"
+    - "labels"
 
 # Custom Fields Configuration
 # Add any custom fields you want to include in search and display

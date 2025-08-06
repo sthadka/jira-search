@@ -170,10 +170,8 @@ class JiraClient:
             JiraClientError: If search fails
         """
         if fields is None:
-            fields = [
-                'key', 'summary', 'description', 'status', 'priority',
-                'assignee', 'reporter', 'created', 'updated', 'comment'
-            ]
+            # Use core fields from config
+            fields = self.config.core_fields.copy()
             # Add custom fields from config
             for custom_field in self.config.custom_fields:
                 fields.append(custom_field['id'])

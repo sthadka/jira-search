@@ -62,7 +62,47 @@ class Database:
             raise DatabaseError(f"Failed to initialize database: {e}")
     
     def _create_issues_table(self, conn: sqlite3.Connection) -> None:
-        """Create the main issues table."""
+        """Create the main issues table with configurable core fields."""
+        # Build core field columns dynamically
+        core_field_columns = []
+        
+        # Always include required fields
+        required_columns = [
+            "key TEXT PRIMARY KEY",
+            "summary TEXT NOT NULL"
+        ]
+        
+        # Map core fields to database columns
+        field_mappings = {
+            'description': 'description TEXT',
+            'status': 'status_id TEXT, status_name TEXT',
+            'priority': 'priority_id TEXT, priority_name TEXT', 
+            'assignee': 'assignee_key TEXT, assignee_name TEXT, assignee_display_name TEXT',
+            'reporter': 'reporter_key TEXT, reporter_name TEXT, reporter_display_name TEXT',
+            'created': 'created DATETIME',
+            'updated': 'updated DATETIME',
+            'comment': 'comments TEXT',
+            'labels': 'labels TEXT',
+            'components': 'components TEXT',
+            'fixVersions': 'fix_versions TEXT',
+            'affectedVersions': 'affected_versions TEXT'
+        }
+        
+        # Add columns for configured core fields
+        for field in self.config.core_fields:
+            if field in ['key', 'summary']:
+                continue  # Already included as required
+            
+            if field in field_mappings:
+                core_field_columns.append(field_mappings[field])
+        
+        # Add project and issue type (commonly needed)
+        core_field_columns.extend([
+            'project_key TEXT',
+            'project_name TEXT', 
+            'issue_type TEXT'
+        ])
+        
         # Build custom field columns
         custom_field_columns = []
         for field in self.custom_fields:
@@ -73,62 +113,62 @@ class Database:
                 column_type = 'TEXT'
             custom_field_columns.append(f"{column_name} {column_type}")
         
-        custom_fields_sql = ""
-        if custom_field_columns:
-            custom_fields_sql = ",\n    " + ",\n    ".join(custom_field_columns)
+        # Combine all columns
+        all_columns = required_columns + core_field_columns + custom_field_columns
+        all_columns.extend([
+            'raw_json TEXT',
+            'synced_at DATETIME DEFAULT CURRENT_TIMESTAMP',
+            'is_deleted BOOLEAN DEFAULT FALSE',
+            'deleted_at DATETIME'
+        ])
+        
+        # Clean up any empty or invalid columns
+        all_columns = [col.strip() for col in all_columns if col.strip()]
         
         sql = f"""
         CREATE TABLE IF NOT EXISTS issues (
-            key TEXT PRIMARY KEY,
-            summary TEXT NOT NULL,
-            description TEXT,
-            status_id TEXT,
-            status_name TEXT,
-            priority_id TEXT,
-            priority_name TEXT,
-            assignee_key TEXT,
-            assignee_name TEXT,
-            assignee_display_name TEXT,
-            reporter_key TEXT,
-            reporter_name TEXT,
-            reporter_display_name TEXT,
-            created DATETIME,
-            updated DATETIME,
-            comments TEXT,
-            project_key TEXT,
-            project_name TEXT,
-            issue_type TEXT{custom_fields_sql},
-            raw_json TEXT,
-            synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            is_deleted BOOLEAN DEFAULT FALSE,
-            deleted_at DATETIME
+            {',\n    '.join(all_columns)}
         )
         """
+        
+        logger.debug(f"Creating table with SQL: {sql}")
         
         conn.execute(sql)
     
     def _create_fts_table(self, conn: sqlite3.Connection) -> None:
-        """Create FTS5 virtual table for full-text search."""
-        # Build custom field columns for FTS
-        custom_field_columns = []
+        """Create FTS5 virtual table for full-text search using configurable search fields."""
+        # Map search fields to database columns
+        search_field_mappings = {
+            'key': 'key UNINDEXED',  # Include key but don't index it for FTS
+            'summary': 'summary',
+            'description': 'description', 
+            'comment': 'comments',
+            'labels': 'labels',
+            'components': 'components',
+            'assignee': 'assignee_display_name',
+            'reporter': 'reporter_display_name'
+        }
+        
+        # Build FTS columns from configured search fields
+        fts_columns = []
+        for field in self.config.search_fields:
+            if field in search_field_mappings:
+                fts_columns.append(search_field_mappings[field])
+        
+        # Always include key (unindexed) and project name for context
+        if 'key UNINDEXED' not in fts_columns:
+            fts_columns.insert(0, 'key UNINDEXED')
+        fts_columns.append('project_name')
+        
+        # Add custom field columns for FTS (text only)
         for field in self.custom_fields:
             if field.get('type') != 'number':  # Only include text fields in FTS
                 column_name = f"custom_{field['id'].replace('customfield_', '')}"
-                custom_field_columns.append(column_name)
-        
-        custom_fields_fts = ""
-        if custom_field_columns:
-            custom_fields_fts = ", " + ", ".join(custom_field_columns)
+                fts_columns.append(column_name)
         
         sql = f"""
         CREATE VIRTUAL TABLE IF NOT EXISTS issues_fts USING fts5(
-            key UNINDEXED,
-            summary,
-            description,
-            comments,
-            assignee_display_name,
-            reporter_display_name,
-            project_name{custom_fields_fts},
+            {', '.join(fts_columns)},
             content='issues',
             content_rowid='rowid'
         )
@@ -136,17 +176,24 @@ class Database:
         
         conn.execute(sql)
         
-        # Create triggers to keep FTS table in sync with custom fields
-        # Build column lists for triggers
-        base_columns = ['rowid', 'key', 'summary', 'description', 'comments', 
-                       'assignee_display_name', 'reporter_display_name', 'project_name']
-        base_columns.extend(custom_field_columns)
+        # Create triggers to keep FTS table in sync
+        # Map FTS columns to actual database columns for triggers
+        fts_to_db_columns = []
+        for fts_col in fts_columns:
+            if fts_col == 'key UNINDEXED':
+                fts_to_db_columns.append('key')
+            elif ' ' in fts_col:  # Remove any extra qualifiers
+                fts_to_db_columns.append(fts_col.split()[0])
+            else:
+                fts_to_db_columns.append(fts_col)
         
-        insert_columns = ', '.join(base_columns)
+        # Add rowid at the beginning for FTS
+        trigger_columns = ['rowid'] + fts_to_db_columns
+        insert_columns = ', '.join(trigger_columns)
         
         new_values = []
         old_values = []
-        for col in base_columns:
+        for col in trigger_columns:
             new_values.append(f'new.{col}')
             old_values.append(f'old.{col}')
         
@@ -230,55 +277,71 @@ class Database:
             processed_data = self._process_issue_data(issue_data)
             
             with sqlite3.connect(self.db_path) as conn:
-                # Build dynamic SQL for custom fields
-                custom_field_columns = []
-                custom_field_placeholders = []
-                custom_field_values = []
+                # Build dynamic SQL based on configured core fields and custom fields
+                columns = ['key', 'summary']  # Always required
+                placeholders = ['?', '?']
+                values = [processed_data['key'], processed_data['summary']]
                 
+                # Add configurable core fields
+                field_mappings = {
+                    'description': 'description',
+                    'status': ['status_id', 'status_name'],
+                    'priority': ['priority_id', 'priority_name'], 
+                    'assignee': ['assignee_key', 'assignee_name', 'assignee_display_name'],
+                    'reporter': ['reporter_key', 'reporter_name', 'reporter_display_name'],
+                    'created': 'created',
+                    'updated': 'updated',
+                    'comment': 'comments',
+                    'labels': 'labels',
+                    'components': 'components',
+                    'fixVersions': 'fix_versions',
+                    'affectedVersions': 'affected_versions'
+                }
+                
+                for field in self.config.core_fields:
+                    if field in ['key', 'summary']:
+                        continue  # Already handled
+                    
+                    if field in field_mappings:
+                        mapping = field_mappings[field]
+                        if isinstance(mapping, list):
+                            # Multiple columns for this field
+                            for col in mapping:
+                                columns.append(col)
+                                placeholders.append('?')
+                                values.append(processed_data.get(col))
+                        else:
+                            # Single column
+                            columns.append(mapping)
+                            placeholders.append('?')
+                            values.append(processed_data.get(mapping))
+                
+                # Add project and issue type (commonly needed)
+                columns.extend(['project_key', 'project_name', 'issue_type'])
+                placeholders.extend(['?', '?', '?'])
+                values.extend([
+                    processed_data.get('project_key'),
+                    processed_data.get('project_name'),
+                    processed_data.get('issue_type')
+                ])
+                
+                # Add custom fields
                 for field in self.custom_fields:
                     column_name = f"custom_{field['id'].replace('customfield_', '')}"
-                    custom_field_columns.append(column_name)
-                    custom_field_placeholders.append("?")
-                    custom_field_values.append(processed_data.get(field['id']))
+                    columns.append(column_name)
+                    placeholders.append('?')
+                    values.append(processed_data.get(field['id']))
                 
-                custom_fields_sql = ""
-                if custom_field_columns:
-                    custom_fields_sql = ", " + ", ".join(custom_field_columns)
-                    custom_placeholders_sql = ", " + ", ".join(custom_field_placeholders)
-                else:
-                    custom_placeholders_sql = ""
+                # Add metadata fields
+                columns.extend(['raw_json'])
+                placeholders.extend(['?'])
+                values.append(json.dumps(issue_data))
                 
                 sql = f"""
                 INSERT OR REPLACE INTO issues (
-                    key, summary, description, status_id, status_name, priority_id, priority_name,
-                    assignee_key, assignee_name, assignee_display_name,
-                    reporter_key, reporter_name, reporter_display_name,
-                    created, updated, comments, project_key, project_name, issue_type, raw_json{custom_fields_sql}
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?{custom_placeholders_sql})
+                    {', '.join(columns)}
+                ) VALUES ({', '.join(placeholders)})
                 """
-                
-                values = [
-                    processed_data['key'],
-                    processed_data['summary'],
-                    processed_data['description'],
-                    processed_data['status_id'],
-                    processed_data['status_name'],
-                    processed_data['priority_id'],
-                    processed_data['priority_name'],
-                    processed_data['assignee_key'],
-                    processed_data['assignee_name'],
-                    processed_data['assignee_display_name'],
-                    processed_data['reporter_key'],
-                    processed_data['reporter_name'],
-                    processed_data['reporter_display_name'],
-                    processed_data['created'],
-                    processed_data['updated'],
-                    processed_data['comments'],
-                    processed_data['project_key'],
-                    processed_data['project_name'],
-                    processed_data['issue_type'],
-                    json.dumps(issue_data)
-                ] + custom_field_values
                 
                 conn.execute(sql, values)
                 
@@ -296,69 +359,99 @@ class Database:
         """
         fields = issue_data.get('fields', {})
         
-        # Extract assignee information
-        assignee = fields.get('assignee') or {}
-        assignee_key = assignee.get('key') if assignee else None
-        assignee_name = assignee.get('name') if assignee else None
-        assignee_display_name = assignee.get('displayName') if assignee else None
-        
-        # Extract reporter information
-        reporter = fields.get('reporter') or {}
-        reporter_key = reporter.get('key') if reporter else None
-        reporter_name = reporter.get('name') if reporter else None
-        reporter_display_name = reporter.get('displayName') if reporter else None
-        
-        # Extract status information
-        status = fields.get('status') or {}
-        status_id = status.get('id')
-        status_name = status.get('name')
-        
-        # Extract priority information
-        priority = fields.get('priority') or {}
-        priority_id = priority.get('id')
-        priority_name = priority.get('name')
-        
-        # Extract project information
-        project = fields.get('project') or {}
-        project_key = project.get('key')
-        project_name = project.get('name')
-        
-        # Extract issue type
-        issue_type_obj = fields.get('issuetype') or {}
-        issue_type = issue_type_obj.get('name')
-        
-        # Combine all comments into a single searchable text field
-        comments_text = ""
-        comments = fields.get('comment', {}).get('comments', [])
-        if comments:
-            comment_texts = []
-            for comment in comments:
-                author = comment.get('author', {}).get('displayName', 'Unknown')
-                body = comment.get('body', '')
-                comment_texts.append(f"{author}: {body}")
-            comments_text = "\n".join(comment_texts)
-        
         processed = {
             'key': issue_data.get('key'),
-            'summary': fields.get('summary', ''),
-            'description': fields.get('description', ''),
-            'status_id': status_id,
-            'status_name': status_name,
-            'priority_id': priority_id,
-            'priority_name': priority_name,
-            'assignee_key': assignee_key,
-            'assignee_name': assignee_name,
-            'assignee_display_name': assignee_display_name,
-            'reporter_key': reporter_key,
-            'reporter_name': reporter_name,
-            'reporter_display_name': reporter_display_name,
-            'created': fields.get('created'),
-            'updated': fields.get('updated'),
-            'comments': comments_text,
-            'project_key': project_key,
-            'project_name': project_name,
-            'issue_type': issue_type
+            'summary': fields.get('summary', '')
         }
+        
+        # Process core fields dynamically based on configuration
+        for field in self.config.core_fields:
+            if field in ['key', 'summary']:
+                continue  # Already handled
+                
+            if field == 'description':
+                processed['description'] = fields.get('description', '')
+                
+            elif field == 'status':
+                status = fields.get('status') or {}
+                processed['status_id'] = status.get('id')
+                processed['status_name'] = status.get('name')
+                
+            elif field == 'priority':
+                priority = fields.get('priority') or {}
+                processed['priority_id'] = priority.get('id')
+                processed['priority_name'] = priority.get('name')
+                
+            elif field == 'assignee':
+                assignee = fields.get('assignee') or {}
+                processed['assignee_key'] = assignee.get('key') if assignee else None
+                processed['assignee_name'] = assignee.get('name') if assignee else None
+                processed['assignee_display_name'] = assignee.get('displayName') if assignee else None
+                
+            elif field == 'reporter':
+                reporter = fields.get('reporter') or {}
+                processed['reporter_key'] = reporter.get('key') if reporter else None
+                processed['reporter_name'] = reporter.get('name') if reporter else None
+                processed['reporter_display_name'] = reporter.get('displayName') if reporter else None
+                
+            elif field == 'created':
+                processed['created'] = fields.get('created')
+                
+            elif field == 'updated':
+                processed['updated'] = fields.get('updated')
+                
+            elif field == 'comment':
+                # Combine all comments into a single searchable text field
+                comments_text = ""
+                comments = fields.get('comment', {}).get('comments', [])
+                if comments:
+                    comment_texts = []
+                    for comment in comments:
+                        author = comment.get('author', {}).get('displayName', 'Unknown')
+                        body = comment.get('body', '')
+                        comment_texts.append(f"{author}: {body}")
+                    comments_text = "\n".join(comment_texts)
+                processed['comments'] = comments_text
+                
+            elif field == 'labels':
+                # Process labels array into searchable text
+                labels = fields.get('labels', [])
+                processed['labels'] = ", ".join(labels) if labels else ""
+                
+            elif field == 'components':
+                # Process components array
+                components = fields.get('components', [])
+                if components:
+                    component_names = [comp.get('name', '') for comp in components if comp.get('name')]
+                    processed['components'] = ", ".join(component_names)
+                else:
+                    processed['components'] = ""
+                    
+            elif field == 'fixVersions':
+                # Process fix versions array
+                fix_versions = fields.get('fixVersions', [])
+                if fix_versions:
+                    version_names = [ver.get('name', '') for ver in fix_versions if ver.get('name')]
+                    processed['fix_versions'] = ", ".join(version_names)
+                else:
+                    processed['fix_versions'] = ""
+                    
+            elif field == 'affectedVersions':
+                # Process affected versions array
+                affected_versions = fields.get('versions', [])
+                if affected_versions:
+                    version_names = [ver.get('name', '') for ver in affected_versions if ver.get('name')]
+                    processed['affected_versions'] = ", ".join(version_names)
+                else:
+                    processed['affected_versions'] = ""
+        
+        # Always extract project and issue type info (commonly needed)
+        project = fields.get('project') or {}
+        processed['project_key'] = project.get('key')
+        processed['project_name'] = project.get('name')
+        
+        issue_type_obj = fields.get('issuetype') or {}
+        processed['issue_type'] = issue_type_obj.get('name')
         
         # Add custom fields
         for field in self.custom_fields:
