@@ -213,7 +213,7 @@ class AdvancedSearch:
         for jql_op, sql_op in operators:
             # Check for operator in condition (case-insensitive for most, but preserve != exactly)
             if jql_op == '!=':
-                if ' != ' in condition or ' != ' in condition:
+                if ' != ' in condition:
                     return self._parse_operator_condition(condition, jql_op, sql_op)
             elif f' {jql_op.upper()} ' in condition.upper():
                 return self._parse_operator_condition(condition, jql_op, sql_op)
@@ -255,9 +255,23 @@ class AdvancedSearch:
             values_str = value_part[1:-1].strip()
             values = [v.strip().strip('"\'') for v in values_str.split(',')]
             
-            placeholders = ','.join(['?'] * len(values))
-            sql_condition = f"{db_column} IN ({placeholders})"
-            return sql_condition, values
+            # Special handling for labels and components fields
+            if db_column in ['labels', 'components']:
+                # For labels/components with IN, we need to check if any of the values exist in the comma-separated list
+                conditions = []
+                all_params = []
+                for value in values:
+                    # Each value can be: exact match, first item, middle item, or last item
+                    condition_parts = f"({db_column} = ? OR {db_column} LIKE ? OR {db_column} LIKE ? OR {db_column} LIKE ?)"
+                    conditions.append(condition_parts)
+                    all_params.extend([value, f"{value},%", f"%, {value}", f"%, {value},%"])
+                
+                sql_condition = f"({' OR '.join(conditions)})"
+                return sql_condition, all_params
+            else:
+                placeholders = ','.join(['?'] * len(values))
+                sql_condition = f"{db_column} IN ({placeholders})"
+                return sql_condition, values
             
         elif sql_op == 'LIKE':
             # Handle contains operator (~)
@@ -282,8 +296,25 @@ class AdvancedSearch:
                 # TODO: Implement user context in future versions
                 value = '__CURRENT_USER_PLACEHOLDER__'
             
-            sql_condition = f"{db_column} {sql_op} ?"
-            return sql_condition, [value]
+            # Special handling for labels and components fields
+            # These are stored as comma-separated strings, so we need pattern matching
+            if db_column in ['labels', 'components']:
+                if sql_op == '=':
+                    # For labels/components, = means "contains this label"
+                    # Use LIKE with word boundary patterns to avoid partial matches
+                    sql_condition = f"({db_column} = ? OR {db_column} LIKE ? OR {db_column} LIKE ? OR {db_column} LIKE ?)"
+                    return sql_condition, [value, f"{value},%", f"%, {value}", f"%, {value},%"]
+                elif sql_op == '!=':
+                    # For labels/components, != means "does not contain this label"
+                    sql_condition = f"({db_column} IS NULL OR ({db_column} != ? AND {db_column} NOT LIKE ? AND {db_column} NOT LIKE ? AND {db_column} NOT LIKE ?))"
+                    return sql_condition, [value, f"{value},%", f"%, {value}", f"%, {value},%"]
+                else:
+                    # For other operators on labels/components, use direct comparison
+                    sql_condition = f"{db_column} {sql_op} ?"
+                    return sql_condition, [value]
+            else:
+                sql_condition = f"{db_column} {sql_op} ?"
+                return sql_condition, [value]
     
     def _search_regex(self, regex_pattern: str, limit: int = 100, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
         """Search using regex pattern with timeout protection.
