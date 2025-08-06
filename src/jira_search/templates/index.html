@@ -122,7 +122,7 @@
                         Clear Selection
                     </button>
                     <button id="bulkEditBtn" class="px-4 py-2 bg-white text-blue-500 rounded-md font-medium transition-all duration-200 hover:bg-gray-100 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed" onclick="openBulkEdit()" disabled>
-                        🔗 Bulk Edit in Jira
+                        🔗 View in Jira
                     </button>
                 </div>
             </div>
@@ -954,35 +954,13 @@
                 return;
             }
             
-            // Generate Jira bulk edit URL - try multiple formats for compatibility
+            // Generate Jira JQL URL for selected issues using configured base URL
             const issueKeys = Array.from(selectedIssues);
+            const jqlQuery = `key in (${issueKeys.map(k => `"${k}"`).join(',')})`;
+            const jiraJqlUrl = `${jiraBaseUrl}/issues/?jql=${encodeURIComponent(jqlQuery)}`;
             
-            // Method 1: Try the new Jira bulk operations URL
-            const bulkEditUrl1 = `${jiraBaseUrl}/secure/BulkEditIssues.jspa?reset=true&tempMax=1000&issues=${issueKeys.join(',')}`;
-            
-            // Method 2: Alternative format for some Jira versions
-            const bulkEditUrl2 = `${jiraBaseUrl}/secure/BulkEdit!default.jspa?reset=true&tempMax=1000&issues=${issueKeys.join(',')}`;
-            
-            // Method 3: Classic format
-            const bulkEditUrl3 = `${jiraBaseUrl}/issues/?jql=key in (${issueKeys.map(k => `"${k}"`).join(',')})`;
-            
-            // Try to open the first URL, with fallbacks
-            try {
-                // First, try opening a bulk operations page
-                window.open(bulkEditUrl1, '_blank');
-                
-                // Show user alternative options if the first doesn't work
-                setTimeout(() => {
-                    if (confirm('If the bulk edit page didn\'t open correctly, would you like to try an alternative URL?')) {
-                        window.open(bulkEditUrl3, '_blank');
-                    }
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Error opening bulk edit:', error);
-                // Fallback to issue list view with JQL
-                window.open(bulkEditUrl3, '_blank');
-            }
+            // Open Jira with JQL filter showing selected issues
+            window.open(jiraJqlUrl, '_blank');
         }
 
         // Keyboard shortcuts for bulk operations
