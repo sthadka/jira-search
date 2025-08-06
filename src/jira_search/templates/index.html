@@ -491,6 +491,166 @@
         .priority-badge.lowest { background: #2ecc71; color: white; }
         .priority-badge.default { background: #95a5a6; color: white; }
 
+        /* Bulk Actions Styles */
+        .bulk-actions-bar {
+            background: #3498db;
+            color: white;
+            padding: 12px 0;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .bulk-actions-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .bulk-selection-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .bulk-select-all {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .bulk-select-all input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkmark {
+            width: 18px;
+            height: 18px;
+            border: 2px solid white;
+            border-radius: 3px;
+            display: inline-block;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .bulk-select-all input[type="checkbox"]:checked + .checkmark {
+            background: white;
+            border-color: white;
+        }
+
+        .bulk-select-all input[type="checkbox"]:checked + .checkmark::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 2px;
+            width: 4px;
+            height: 8px;
+            border: solid #3498db;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .selection-count {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .bulk-action-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bulk-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bulk-btn-primary {
+            background: white;
+            color: #3498db;
+        }
+
+        .bulk-btn-primary:hover:not(:disabled) {
+            background: #ecf0f1;
+            transform: translateY(-1px);
+        }
+
+        .bulk-btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .bulk-btn-secondary {
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .bulk-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: white;
+        }
+
+        /* Result item checkbox styles */
+        .result-checkbox {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+        }
+
+        .result-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #3498db;
+        }
+
+        .result-item {
+            position: relative;
+            padding-left: 50px; /* Make room for checkbox */
+        }
+
+        .result-item.selected {
+            background-color: #e3f2fd;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-item:hover .result-checkbox {
+            opacity: 1;
+        }
+
+        .result-checkbox {
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .result-item.selected .result-checkbox {
+            opacity: 1;
+        }
+
+        .result-content {
+            flex: 1;
+            cursor: pointer;
+        }
+
         .custom-fields {
             margin-top: 8px;
             display: flex;
@@ -617,6 +777,29 @@
             <div id="validationMessage" class="validation-message"></div>
         </div>
 
+        <!-- Bulk Actions Toolbar -->
+        <div id="bulkActionsBar" class="bulk-actions-bar" style="display: none;">
+            <div class="bulk-actions-content">
+                <div class="bulk-selection-controls">
+                    <label class="bulk-select-all">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                        <span class="checkmark"></span>
+                        Select All
+                    </label>
+                    <span id="selectionCount" class="selection-count">0 issues selected</span>
+                </div>
+                
+                <div class="bulk-action-buttons">
+                    <button id="clearSelectionBtn" class="bulk-btn bulk-btn-secondary" onclick="clearAllSelections()">
+                        Clear Selection
+                    </button>
+                    <button id="bulkEditBtn" class="bulk-btn bulk-btn-primary" onclick="openBulkEdit()" disabled>
+                        🔗 Bulk Edit in Jira
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div id="resultsContainer" class="results-container" style="display: none;">
             <div class="results-header">
                 <div id="resultsInfo" class="query-info"></div>
@@ -673,9 +856,28 @@
         let currentSuggestionIndex = -1;
         let currentSearchResults = [];
         let currentIssueIndex = -1;
+        let selectedIssues = new Set(); // Track selected issue keys
+        let bulkActionsVisible = false;
+        let jiraBaseUrl = 'https://issues.redhat.com'; // Default, will be updated from config
+
+        // Load configuration on page load
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                if (config.jira_base_url) {
+                    jiraBaseUrl = config.jira_base_url;
+                }
+            } catch (error) {
+                console.warn('Failed to load config, using default Jira URL:', error);
+            }
+        }
 
         // Initialize event listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // Load configuration first
+            loadConfig();
+            
             const searchBox = document.getElementById('searchBox');
             const modeButtons = document.querySelectorAll('.search-mode');
             const searchHelp = document.getElementById('searchHelp');
@@ -1126,11 +1328,18 @@
             // Update results info
             info.innerHTML = `Found ${data.total} results for "<mark>${escapeHtml(query)}</mark>" in ${data.query_time_ms}ms`;
             
-            // Generate results HTML with highlighting
+            // Generate results HTML with highlighting and checkboxes
             list.innerHTML = data.results.map(result => `
-                <div class="result-item" onclick="openIssue('${result.key}')">
-                    <div class="result-key">${result.key}</div>
-                    <div class="result-summary">${escapeHtml(result.summary)}</div>
+                <div class="result-item ${selectedIssues.has(result.key) ? 'selected' : ''}" data-issue-key="${result.key}">
+                    <div class="result-checkbox">
+                        <input type="checkbox" 
+                               ${selectedIssues.has(result.key) ? 'checked' : ''}
+                               onchange="toggleIssueSelection('${result.key}')"
+                               onclick="event.stopPropagation()">
+                    </div>
+                    <div class="result-content" onclick="openIssue('${result.key}')">
+                        <div class="result-key">${result.key}</div>
+                        <div class="result-summary">${escapeHtml(result.summary)}</div>
                     <div class="result-meta">
                         <div class="result-meta-item">
                             <span class="status-badge ${getStatusClass(result.status_name)}">${result.status_name || 'Unknown'}</span>
@@ -1151,8 +1360,9 @@
                         <div class="result-meta-item">
                             📁 ${result.project_key}
                         </div>
+                        </div>
+                        ${generateCustomFields(result.custom_fields)}
                     </div>
-                    ${generateCustomFields(result.custom_fields)}
                 </div>
             `).join('');
         }
@@ -1241,6 +1451,157 @@
             container.style.display = 'none';
             noResults.style.display = 'none';
         }
+
+        // Bulk Selection Functions
+        function toggleIssueSelection(issueKey) {
+            if (selectedIssues.has(issueKey)) {
+                selectedIssues.delete(issueKey);
+            } else {
+                selectedIssues.add(issueKey);
+            }
+            
+            updateResultItemAppearance(issueKey);
+            updateBulkActionsUI();
+        }
+
+        function updateResultItemAppearance(issueKey) {
+            const resultItem = document.querySelector(`[data-issue-key="${issueKey}"]`);
+            const checkbox = resultItem?.querySelector('input[type="checkbox"]');
+            
+            if (resultItem) {
+                if (selectedIssues.has(issueKey)) {
+                    resultItem.classList.add('selected');
+                    if (checkbox) checkbox.checked = true;
+                } else {
+                    resultItem.classList.remove('selected');
+                    if (checkbox) checkbox.checked = false;
+                }
+            }
+        }
+
+        function updateBulkActionsUI() {
+            const bulkActionsBar = document.getElementById('bulkActionsBar');
+            const selectionCount = document.getElementById('selectionCount');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const bulkEditBtn = document.getElementById('bulkEditBtn');
+            
+            const selectedCount = selectedIssues.size;
+            const totalVisibleResults = currentSearchResults.length;
+            
+            // Show/hide bulk actions bar
+            if (selectedCount > 0 && !bulkActionsVisible) {
+                bulkActionsBar.style.display = 'block';
+                bulkActionsVisible = true;
+            } else if (selectedCount === 0 && bulkActionsVisible) {
+                bulkActionsBar.style.display = 'none';
+                bulkActionsVisible = false;
+            }
+            
+            // Update selection count
+            selectionCount.textContent = `${selectedCount} issue${selectedCount !== 1 ? 's' : ''} selected`;
+            
+            // Update select all checkbox state
+            if (selectedCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedCount === totalVisibleResults) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+            
+            // Enable/disable bulk edit button
+            bulkEditBtn.disabled = selectedCount === 0;
+        }
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            
+            if (selectAllCheckbox.checked) {
+                // Select all visible results
+                currentSearchResults.forEach(result => {
+                    selectedIssues.add(result.key);
+                    updateResultItemAppearance(result.key);
+                });
+            } else {
+                // Deselect all visible results
+                currentSearchResults.forEach(result => {
+                    selectedIssues.delete(result.key);
+                    updateResultItemAppearance(result.key);
+                });
+            }
+            
+            updateBulkActionsUI();
+        }
+
+        function clearAllSelections() {
+            selectedIssues.clear();
+            
+            // Update all visible checkboxes
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.classList.remove('selected');
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = false;
+            });
+            
+            updateBulkActionsUI();
+        }
+
+        function openBulkEdit() {
+            if (selectedIssues.size === 0) {
+                alert('Please select at least one issue to edit.');
+                return;
+            }
+            
+            // Generate Jira bulk edit URL
+            const issueKeys = Array.from(selectedIssues).join(',');
+            const bulkEditUrl = `${jiraBaseUrl}/secure/BulkEdit.jspa?tempMax=1000&reset=true&decorator=none&returnUrl=/browse/&issues=${issueKeys}`;
+            
+            // Open in new tab
+            window.open(bulkEditUrl, '_blank');
+        }
+
+        // Keyboard shortcuts for bulk operations
+        document.addEventListener('keydown', function(e) {
+            // Only handle if not in input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Ctrl+A or Cmd+A to select all
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && currentSearchResults.length > 0) {
+                e.preventDefault();
+                const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+                selectAllCheckbox.checked = true;
+                toggleSelectAll();
+            }
+            
+            // Space to toggle selection on focused result
+            if (e.key === ' ' && document.activeElement?.closest('.result-item')) {
+                e.preventDefault();
+                const resultItem = document.activeElement.closest('.result-item');
+                const issueKey = resultItem.dataset.issueKey;
+                if (issueKey) {
+                    toggleIssueSelection(issueKey);
+                }
+            }
+        });
+
+        // Update displayResults to show bulk actions bar when results are displayed
+        const originalDisplayResults = displayResults;
+        displayResults = function(data, query) {
+            originalDisplayResults(data, query);
+            
+            // Update bulk actions UI after displaying results
+            updateBulkActionsUI();
+            
+            // Re-apply selections to newly rendered items
+            selectedIssues.forEach(issueKey => {
+                updateResultItemAppearance(issueKey);
+            });
+        };
     </script>
 </body>
 </html>

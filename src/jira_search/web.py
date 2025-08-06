@@ -493,6 +493,21 @@ def create_app(config: Config) -> Flask:
                 'error': f'Validation failed: {str(e)}'
             }), 500
     
+    @app.route('/api/config')
+    def api_config():
+        """Get client configuration (public settings only)."""
+        try:
+            return jsonify({
+                'jira_url': config.jira_url,
+                'jira_base_url': config.jira_url.rstrip('/'),
+                'search_max_results': config.search_max_results
+            })
+        except Exception as e:
+            logger.error(f"Config error: {e}")
+            return jsonify({
+                'error': 'Failed to get configuration'
+            }), 500
+    
     @app.route('/api/status')
     def api_status():
         """Get application status and statistics."""
