@@ -787,7 +787,7 @@ class Database:
             raise DatabaseError(f"Failed to get statistics: {e}")
     
     def search_issues(self, query: str, limit: int = 100, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
-        """Search issues using FTS5.
+        """Search issues using FTS5 with fallback for exact matches.
         
         Args:
             query: Search query
@@ -801,7 +801,30 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 
-                # Search using FTS5, excluding deleted issues
+                # Check if query looks like an exact issue key for direct lookup
+                import re
+                if re.match(r'^[A-Z]+-\d+$', query.strip()):
+                    # Direct key lookup for exact issue key matches
+                    cursor = conn.execute("""
+                        SELECT *, 1 as rank FROM issues 
+                        WHERE key = ? AND (is_deleted IS NULL OR is_deleted = FALSE)
+                        LIMIT ? OFFSET ?
+                    """, (query.strip(), limit, offset))
+                    
+                    results = [dict(row) for row in cursor.fetchall()]
+                    
+                    if results:
+                        # Found exact match
+                        cursor = conn.execute("""
+                            SELECT COUNT(*) FROM issues 
+                            WHERE key = ? AND (is_deleted IS NULL OR is_deleted = FALSE)
+                        """, (query.strip(),))
+                        total = cursor.fetchone()[0]
+                        return results, total
+                
+                # Fall back to FTS5 search for other queries
+                fts_query = self._sanitize_fts_query(query)
+                
                 cursor = conn.execute("""
                     SELECT i.*, rank 
                     FROM issues_fts fts
@@ -809,7 +832,7 @@ class Database:
                     WHERE issues_fts MATCH ? AND (i.is_deleted IS NULL OR i.is_deleted = FALSE)
                     ORDER BY rank
                     LIMIT ? OFFSET ?
-                """, (query, limit, offset))
+                """, (fts_query, limit, offset))
                 
                 results = [dict(row) for row in cursor.fetchall()]
                 
@@ -819,7 +842,7 @@ class Database:
                     FROM issues_fts fts
                     JOIN issues i ON i.rowid = fts.rowid
                     WHERE issues_fts MATCH ? AND (i.is_deleted IS NULL OR i.is_deleted = FALSE)
-                """, (query,))
+                """, (fts_query,))
                 
                 total = cursor.fetchone()[0]
                 
@@ -827,3 +850,35 @@ class Database:
                 
         except sqlite3.Error as e:
             raise DatabaseError(f"Search failed: {e}")
+    
+    def _sanitize_fts_query(self, query: str) -> str:
+        """Sanitize query for FTS5 to handle special characters and operators.
+        
+        Args:
+            query: Raw search query
+            
+        Returns:
+            Sanitized FTS5 query
+        """
+        if not query or not query.strip():
+            return '""'  # Empty query
+            
+        query = query.strip()
+        
+        # Check if it looks like an issue key (PROJECT-NUMBER format)
+        import re
+        if re.match(r'^[A-Z]+-\d+$', query):
+            # For issue keys, quote the entire string to prevent FTS5 from parsing the hyphen
+            return f'"{query}"'
+        
+        # Check for other special FTS5 characters that need escaping
+        special_chars = ['-', ':', '(', ')', '[', ']', '{', '}', '"']
+        
+        # If query contains special chars but isn't already quoted, quote it
+        if any(char in query for char in special_chars) and not (query.startswith('"') and query.endswith('"')):
+            # Escape any existing quotes in the query
+            escaped_query = query.replace('"', '""')
+            return f'"{escaped_query}"'
+        
+        # Return as-is for simple queries
+        return query
