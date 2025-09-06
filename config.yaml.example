@@ -1,49 +1,97 @@
 # Jira Search Configuration
-# Copy this file to config.yaml and fill in your details
+# This file supports environment variable substitution using ${VAR_NAME} or ${VAR_NAME:default}
 
+# Jira Connection Settings
 jira:
-  # Your Jira Data Center URL (without trailing slash)
-  url: "https://your-jira.company.com"
+  # Jira instance URL (required)
+  url: "${JIRA_URL:https://your-jira.company.com}"
 
-  # Your Jira username
-  username: "your-username"
+  # Jira username (required)
+  username: "${JIRA_USERNAME:your-username}"
 
-  # Personal Access Token for authentication
-  # Generate this in Jira: Profile > Personal Access Tokens
-  pat: "your-personal-access-token"
+  # Personal Access Token (required)
+  # Create one at: https://id.atlassian.com/manage-profile/security/api-tokens
+  pat: "${JIRA_PAT}"
 
+# Sync Configuration
 sync:
-  # Project key to sync (e.g., "PROJ") - leave empty to use JQL instead
-  project_key: ""
+  # Project key to sync (optional, use either this or jql)
+  project_key: "${JIRA_PROJECT:}"
 
-  # Alternative: Use JQL query for more specific syncing
-  # If both project_key and jql are specified, jql takes precedence
-  jql: "project = PROJ AND created >= -30d"
+  # Custom JQL query for syncing (optional, use either this or project_key)
+  # Example: "project = PROJ AND created >= -30d"
+  jql: "${JIRA_SYNC_JQL:}"
 
-  # API rate limiting (requests per minute)
+  # API rate limiting (requests per minute, default: 100)
   rate_limit: 100
 
-  # Number of issues to fetch per API call
+  # Batch size for syncing issues (default: 100)
   batch_size: 100
 
-# Custom fields to include in sync and search
-# Find field IDs in Jira: Admin > Issues > Custom Fields
-custom_fields:
-  - id: "customfield_10001"
-    name: "Story Points"
-    type: "number"
-  - id: "customfield_10002"
-    name: "Epic Link"
-    type: "text"
-
+# Search Configuration
 search:
-  # Maximum number of search results to return
+  # Maximum search results to return (default: 1000)
   max_results: 1000
 
-  # Search timeout in seconds (applies to regex queries)
+  # Search timeout in seconds (default: 5)
   timeout_seconds: 5
 
-# Database configuration
+# Database Configuration
 database:
-  # Path to SQLite database file
+  # Database file path (default: jira_search.db)
   path: "jira_search.db"
+
+# Field Configuration
+fields:
+  # Core Jira fields to fetch and store (required: key, summary)
+  core:
+    - "key"
+    - "summary"
+    - "description"
+    - "status"
+    - "priority"
+    - "assignee"
+    - "reporter"
+    - "created"
+    - "updated"
+    - "comment"
+    - "labels"           # New: Issue labels/tags
+    - "components"       # Optional: Project components
+    - "issuetype"        # Issue type (Story, Bug, Task, etc.)
+    - "project"          # Project information (key, name)
+    - "fixVersions"      # Optional: Fix versions
+    - "affectedVersions" # Optional: Affected versions
+
+  # Fields to include in full-text search index (subset of core)
+  search:
+    - "key"
+    - "summary"
+    - "description"
+    - "comment"
+    - "labels"
+
+# Custom Fields Configuration
+# Add any custom fields you want to include in search and display
+custom_fields: []
+
+# Performance Tuning (optional)
+performance:
+  # Enable query caching (default: true)
+  cache_queries: true
+
+  # Cache TTL in seconds (default: 300)
+  cache_ttl: 300
+
+  # Database connection pool size (default: 5)
+  db_pool_size: 5
+
+# Logging Configuration (optional)
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, default: INFO)
+  level: "INFO"
+
+  # Log file path (optional, logs to console if not specified)
+  file: "jira_search.log"
+
+  # Enable structured logging (default: false)
+  structured: false
