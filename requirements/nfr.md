@@ -1,4 +1,4 @@
-# Non-Functional Requirements: Jira Search Mirror
+# Non-Functional Requirements: Jira Search
 
 ## 1. Performance
 

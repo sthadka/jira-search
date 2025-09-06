@@ -1,8 +1,8 @@
-# Claude Code Implementation Guide: Jira Search Mirror
+# Claude Code Implementation Guide: Jira Search
 
 ## 🎯 Project Overview
 
-Build a **local Jira search interface** that mirrors Jira issues into a fast, searchable SQLite database with a web UI. This solves the problem of Jira's slow, limited search capabilities by providing sub-1-second search with support for natural language, JQL, and regex queries.
+Build a **local Jira search interface** that syncs Jira issues into a fast, searchable SQLite database with a web UI. This solves the problem of Jira's slow, limited search capabilities by providing sub-1-second search with support for natural language, JQL, and regex queries.
 
 **Core Value Proposition**: Transform 15-20% time waste in Jira navigation into productive search and bulk operations.
 

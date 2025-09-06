@@ -1,4 +1,4 @@
-"""Command-line interface for Jira Search Mirror."""
+"""Command-line interface for Jira Search."""
 
 import click
 import logging
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging')
 @click.pass_context
 def cli(ctx, config: str, verbose: bool):
-    """Jira Search Mirror - Fast local search for Jira issues."""
+    """Jira Search - Fast local search for Jira issues."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
@@ -49,7 +49,7 @@ def init_config(ctx, with_examples: bool, minimal: bool):
     try:
         if minimal:
             # Generate minimal config
-            content = """# Minimal Jira Search Mirror Configuration
+            content = """# Minimal Jira Search Configuration
 jira:
   url: "https://your-jira.company.com"
   username: "your-username"

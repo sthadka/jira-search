@@ -1,4 +1,4 @@
-# Functional Specification: Jira Search Mirror
+# Functional Specification: Jira Search
 
 ## 1. Detailed User Stories & Acceptance Criteria
 

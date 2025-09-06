@@ -1,10 +1,10 @@
-# Jira Search Mirror API
+# Jira Search API
 
-A comprehensive REST API for the Jira Search Mirror application, providing fast local search capabilities for Jira issues.
+A comprehensive REST API for the Jira Search application, providing fast local search capabilities for Jira issues.
 
 ## Overview
 
-The Jira Search Mirror API provides programmatic access to search and retrieve Jira issues from a locally mirrored database. It supports multiple search modes, type-ahead suggestions, and comprehensive issue details.
+The Jira Search API provides programmatic access to search and retrieve Jira issues from a locally mirrored database. It supports multiple search modes, type-ahead suggestions, and comprehensive issue details.
 
 ### Key Features
 
@@ -19,7 +19,7 @@ The Jira Search Mirror API provides programmatic access to search and retrieve J
 ### 1. Start the Server
 
 ```bash
-# Start the Jira Search Mirror server
+# Start the Jira Search server
 python -m jira_search serve
 
 # Server will be available at http://localhost:8080
@@ -361,4 +361,4 @@ api_keys = {
 
 ## License
 
-This API documentation and examples are provided under the same license as the Jira Search Mirror project.
+This API documentation and examples are provided under the same license as the Jira Search project.

@@ -1,4 +1,4 @@
-"""API Authentication and Rate Limiting for Jira Search Mirror."""
+"""API Authentication and Rate Limiting for Jira Search."""
 
 import time
 import hashlib
@@ -258,5 +258,5 @@ def add_api_info_headers(response):
     """Add API information headers to response."""
     if hasattr(response, 'headers'):
         response.headers['X-API-Version'] = 'v1'
-        response.headers['X-Powered-By'] = 'Jira Search Mirror'
+        response.headers['X-Powered-By'] = 'Jira Search'
     return response

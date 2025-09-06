@@ -1,4 +1,4 @@
-# Product Requirements Document: Jira Search Mirror
+# Product Requirements Document: Jira Search
 
 ## 1. Problem Statement
 

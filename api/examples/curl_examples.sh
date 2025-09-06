@@ -1,8 +1,8 @@
 #!/bin/bash
 # 
-# Jira Search Mirror API Examples using curl
+# Jira Search API Examples using curl
 # 
-# This script demonstrates how to use the Jira Search Mirror API with curl commands.
+# This script demonstrates how to use the Jira Search API with curl commands.
 # It includes examples for all major API endpoints with proper error handling.
 #
 
@@ -58,7 +58,7 @@ check_jq() {
     fi
 }
 
-echo "🔍 Jira Search Mirror API Examples"
+echo "🔍 Jira Search API Examples"
 echo "================================="
 echo ""
 
@@ -68,7 +68,7 @@ check_jq
 echo -e "${BLUE}Testing server connectivity...${NC}"
 if ! curl -s --connect-timeout 5 "$BASE_URL/api/v1" > /dev/null; then
     echo -e "${RED}❌ Cannot connect to $BASE_URL${NC}"
-    echo "Make sure the Jira Search Mirror server is running:"
+    echo "Make sure the Jira Search server is running:"
     echo "  python -m jira_search serve"
     exit 1
 fi

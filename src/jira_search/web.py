@@ -1,4 +1,4 @@
-"""Web interface for Jira Search Mirror."""
+"""Web interface for Jira Search."""
 
 import time
 import logging
@@ -584,7 +584,7 @@ def create_app(config: Config) -> Flask:
         """API version 1 information."""
         return jsonify({
             'version': '1.0.0',
-            'name': 'Jira Search Mirror API',
+            'name': 'Jira Search API',
             'description': 'Fast local Jira search interface',
             'documentation': '/api/v1/docs',
             'endpoints': {
@@ -660,7 +660,7 @@ def create_app(config: Config) -> Flask:
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Jira Search Mirror API Documentation</title>
+            <title>Jira Search API Documentation</title>
             <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
         </head>
         <body>

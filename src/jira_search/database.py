@@ -1,4 +1,4 @@
-"""SQLite database management for Jira Search Mirror."""
+"""SQLite database management for Jira Search."""
 
 import sqlite3
 import json

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Jira Search Mirror API
+  title: Jira Search API
   description: |
     A fast, local Jira search interface that mirrors Jira issues into a searchable SQLite database.
     
@@ -18,8 +18,8 @@ info:
     API endpoints are rate-limited to ensure fair usage. Default limits apply per API key or IP address.
   version: 1.0.0
   contact:
-    name: Jira Search Mirror
-    url: https://github.com/your-org/jira-search-mirror
+    name: Jira Search
+    url: https://github.com/your-org/jira-search
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT

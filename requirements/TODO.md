@@ -1,4 +1,4 @@
-# Implementation Roadmap: Jira Search Mirror
+# Implementation Roadmap: Jira Search
 
 ## Phase 1: Foundation & Basic Connection (Week 1)
 **Goal**: Establish Jira connectivity and prove the concept works

@@ -1,4 +1,4 @@
-"""Setup script for Jira Search Mirror."""
+"""Setup script for Jira Search."""
 
 from setuptools import setup, find_packages
 

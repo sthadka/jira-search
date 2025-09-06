@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Example Python client for Jira Search Mirror API.
+Example Python client for Jira Search API.
 
-This script demonstrates how to use the Jira Search Mirror API with Python.
+This script demonstrates how to use the Jira Search API with Python.
 It includes examples for all major API endpoints with proper error handling.
 """
 
@@ -13,13 +13,13 @@ from typing import Dict, List, Optional, Any
 
 
 class JiraSearchClient:
-    """Python client for Jira Search Mirror API."""
+    """Python client for Jira Search API."""
     
     def __init__(self, base_url: str = "http://localhost:8080", api_key: Optional[str] = None):
         """Initialize the client.
         
         Args:
-            base_url: Base URL of the Jira Search Mirror server
+            base_url: Base URL of the Jira Search server
             api_key: Optional API key for authentication
         """
         self.base_url = base_url.rstrip('/')
@@ -188,8 +188,8 @@ class RateLimitError(APIError):
 
 
 def main():
-    """Example usage of the Jira Search Mirror API client."""
-    print("🔍 Jira Search Mirror API Client Example")
+    """Example usage of the Jira Search API client."""
+    print("🔍 Jira Search API Client Example")
     print("=" * 50)
     
     # Initialize client

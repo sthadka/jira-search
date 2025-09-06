@@ -1,7 +1,7 @@
 /**
- * Jira Search Mirror API JavaScript Client
+ * Jira Search API JavaScript Client
  * 
- * This module provides a JavaScript client for the Jira Search Mirror API.
+ * This module provides a JavaScript client for the Jira Search API.
  * It can be used in both browser and Node.js environments.
  */
 
@@ -191,7 +191,7 @@ class APIError extends Error {
 
 // Example usage function
 async function example() {
-    console.log('🔍 Jira Search Mirror API JavaScript Client Example');
+    console.log('🔍 Jira Search API JavaScript Client Example');
     console.log('====================================================');
     
     // Initialize client

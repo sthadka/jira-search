@@ -1,4 +1,4 @@
-"""Configuration management for Jira Search Mirror."""
+"""Configuration management for Jira Search."""
 
 import os
 import yaml
@@ -13,7 +13,7 @@ class ConfigError(Exception):
 
 
 class Config:
-    """Configuration manager for Jira Search Mirror."""
+    """Configuration manager for Jira Search."""
     
     def __init__(self, config_path: Optional[str] = None):
         """Initialize configuration.
@@ -344,7 +344,7 @@ class Config:
     
     def generate_example_config(self) -> str:
         """Generate an example configuration with comments and documentation."""
-        return '''# Jira Search Mirror Configuration
+        return '''# Jira Search Configuration
 # This file supports environment variable substitution using ${VAR_NAME} or ${VAR_NAME:default}
 
 # Jira Connection Settings
