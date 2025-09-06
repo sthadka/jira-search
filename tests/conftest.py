@@ -13,7 +13,8 @@ def setup_test_environment():
     test_env_vars = {
         'JIRA_URL': 'https://test-jira.example.com',
         'JIRA_USERNAME': 'test-user',
-        'JIRA_PAT': 'test-token'
+        'JIRA_PAT': 'test-token',
+        'JIRA_PROJECT': 'TEST'
     }
     
     for var, value in test_env_vars.items():

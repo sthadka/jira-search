@@ -38,6 +38,7 @@ jobs:
           JIRA_URL: https://test-jira.example.com
           JIRA_USERNAME: test-user
           JIRA_PAT: test-token
+          JIRA_PROJECT: TEST
           
       - name: Lint code
         run: |
