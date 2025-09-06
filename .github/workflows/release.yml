@@ -67,7 +67,10 @@ jobs:
         
       - name: Run semantic-release
         id: semantic
-        run: semantic-release
+        run: |
+          cd $GITHUB_WORKSPACE
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
