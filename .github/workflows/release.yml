@@ -42,7 +42,7 @@ jobs:
           
       - name: Lint code
         run: |
-          flake8 src/jira_search
+          flake8 src/jira_search --max-line-length=100
           black --check src/jira_search
 
   release:
