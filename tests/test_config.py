@@ -13,10 +13,18 @@ class TestConfig:
     
     def test_config_creation(self):
         """Test basic config object creation."""
+        # Since we now have conftest.py that creates config.yaml, we can load it
         config = Config()
+        
+        # Test that config object has expected attributes
         assert hasattr(config, 'jira_url')
-        assert hasattr(config, 'jira_username')
+        assert hasattr(config, 'jira_username') 
         assert hasattr(config, 'database_path')
+        
+        # Test that properties are accessible
+        assert config.jira_url is not None
+        assert config.jira_username is not None
+        assert config.database_path is not None
     
     def test_load_valid_config(self):
         """Test loading a valid configuration file."""

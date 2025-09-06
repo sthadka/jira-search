@@ -27,6 +27,10 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
           
+      - name: Setup test configuration
+        run: |
+          cp config.yaml.example config.yaml
+          
       - name: Run tests
         run: |
           python -m pytest tests/ -v --cov=jira_search
