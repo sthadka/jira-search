@@ -1,0 +1,807 @@
+openapi: 3.0.3
+info:
+  title: Jira Search Mirror API
+  description: |
+    A fast, local Jira search interface that mirrors Jira issues into a searchable SQLite database.
+    
+    ## Features
+    - **Fast Search**: Sub-1-second response times with FTS5 full-text search
+    - **Multiple Search Modes**: Natural language, JQL syntax, and regex patterns
+    - **Type-ahead Suggestions**: Intelligent autocomplete for all search modes
+    - **Issue Details**: Complete issue information with custom fields
+    - **Query Validation**: Syntax validation for JQL and regex queries
+    
+    ## Authentication
+    API keys can be configured for production deployments. Contact your administrator for API key access.
+    
+    ## Rate Limiting
+    API endpoints are rate-limited to ensure fair usage. Default limits apply per API key or IP address.
+  version: 1.0.0
+  contact:
+    name: Jira Search Mirror
+    url: https://github.com/your-org/jira-search-mirror
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+  - url: https://your-domain.com/api
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+  - {}  # Allow no authentication for development
+
+paths:
+  /search:
+    get:
+      summary: Search issues
+      description: |
+        Search for Jira issues using natural language, JQL syntax, or regex patterns.
+        
+        **Search Modes:**
+        - `natural`: Full-text search with ranking (default)
+        - `jql`: Jira Query Language syntax
+        - `regex`: Regular expression pattern matching
+        
+        **Performance:**
+        - Typical response time: < 1 second
+        - Maximum results per request: 1000
+        - Supports pagination with limit/offset
+      operationId: searchIssues
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 500
+          example: "security vulnerability"
+        - name: mode
+          in: query
+          required: false
+          description: Search mode
+          schema:
+            type: string
+            enum: [natural, jql, regex]
+            default: natural
+          example: "natural"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results (max 1000)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          example: 50
+        - name: offset
+          in: query
+          required: false
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                natural_search:
+                  summary: Natural language search
+                  value:
+                    results:
+                      - key: "ROX-12345"
+                        summary: "Fix security vulnerability in authentication"
+                        status_name: "Open"
+                        priority_name: "High"
+                        assignee_display_name: "John Doe"
+                        project_key: "ROX"
+                        issue_type: "Bug"
+                        created: "2025-01-15T10:30:00.000+0000"
+                        updated: "2025-01-20T14:22:00.000+0000"
+                        labels: "security, authentication"
+                        custom_fields:
+                          team: "Security Team"
+                          px_impact_score: 8.5
+                    total: 1
+                    query: "security vulnerability"
+                    mode: "natural"
+                    limit: 100
+                    offset: 0
+                    query_time_ms: 245
+                jql_search:
+                  summary: JQL search
+                  value:
+                    results:
+                      - key: "ROX-12346"
+                        summary: "Update documentation for new feature"
+                        status_name: "In Progress"
+                        priority_name: "Medium"
+                        assignee_display_name: "Jane Smith"
+                        project_key: "ROX"
+                        issue_type: "Task"
+                        created: "2025-01-10T09:15:00.000+0000"
+                        updated: "2025-01-18T16:45:00.000+0000"
+                        labels: "documentation"
+                        custom_fields:
+                          team: "Documentation Team"
+                          work_type: "Development"
+                    total: 1
+                    query: 'project = ROX AND assignee = "Jane Smith"'
+                    mode: "jql"
+                    limit: 100
+                    offset: 0
+                    query_time_ms: 89
+        '400':
+          description: Bad request (invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Query parameter "q" is required'
+                results: []
+                total: 0
+                query_time_ms: 0
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Database error: Connection failed"
+                results: []
+                total: 0
+                query_time_ms: 15
+
+  /suggest:
+    get:
+      summary: Get search suggestions
+      description: |
+        Get intelligent type-ahead suggestions based on partial query input.
+        Suggestions are tailored to the search mode and provide contextual completions.
+        
+        **Suggestion Types:**
+        - **Natural mode**: Issue keys, assignees, teams, summary matches
+        - **JQL mode**: Field names, operators, value suggestions
+        - **Regex mode**: Common patterns, completions
+      operationId: getSuggestions
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Partial query string (minimum 2 characters)
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          example: "ROX-"
+        - name: mode
+          in: query
+          required: false
+          description: Search mode for context-specific suggestions
+          schema:
+            type: string
+            enum: [natural, jql, regex]
+            default: natural
+          example: "natural"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of suggestions
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+          example: 5
+      responses:
+        '200':
+          description: List of suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+              example:
+                suggestions:
+                  - type: "issue_key"
+                    value: "ROX-12345"
+                    label: "🎫 ROX-12345 - Fix security vulnerability in authentication"
+                    icon: "🎫"
+                  - type: "issue_key"
+                    value: "ROX-12346"
+                    label: "🎫 ROX-12346 - Update documentation for new feature"
+                    icon: "🎫"
+        '400':
+          description: Bad request (query too short)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items: {}
+                    example: []
+
+  /issues/{issueKey}:
+    get:
+      summary: Get issue details
+      description: |
+        Retrieve complete details for a specific Jira issue including:
+        - Full description and comments
+        - All standard and custom fields
+        - Project and issue type information
+        - Direct link to Jira issue
+      operationId: getIssueDetail
+      tags:
+        - Issues
+      parameters:
+        - name: issueKey
+          in: path
+          required: true
+          description: Jira issue key (e.g., "ROX-12345")
+          schema:
+            type: string
+            pattern: '^[A-Z]+-\d+$'
+          example: "ROX-12345"
+      responses:
+        '200':
+          description: Issue details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+              example:
+                key: "ROX-12345"
+                summary: "Fix security vulnerability in authentication"
+                description: "Detailed description of the security issue..."
+                status:
+                  id: "1"
+                  name: "Open"
+                priority:
+                  id: "2"
+                  name: "High"
+                assignee:
+                  key: "jdoe"
+                  name: "jdoe"
+                  display_name: "John Doe"
+                reporter:
+                  key: "manager"
+                  name: "manager"
+                  display_name: "Project Manager"
+                created: "2025-01-15T10:30:00.000+0000"
+                updated: "2025-01-20T14:22:00.000+0000"
+                comments: "Initial analysis shows the vulnerability affects..."
+                labels: "security, authentication, critical"
+                components: "Security, Authentication"
+                project:
+                  key: "ROX"
+                  name: "Red Hat Advanced Cluster Security"
+                issue_type: "Bug"
+                custom_fields:
+                  px_impact_score: 8.5
+                  product_manager: "Jane Smith"
+                  work_type: "Bug Fix"
+                  team: "Security Team"
+                jira_url: "https://issues.example.com/browse/ROX-12345"
+        '404':
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Issue not found"
+
+  /validate:
+    get:
+      summary: Validate query syntax
+      description: |
+        Validate the syntax of JQL or regex queries before executing searches.
+        Helps users identify syntax errors and provides helpful error messages.
+      operationId: validateQuery
+      tags:
+        - Validation
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Query to validate
+          schema:
+            type: string
+            minLength: 1
+          example: 'project = ROX AND status IN ("Open", "In Progress")'
+        - name: mode
+          in: query
+          required: true
+          description: Query mode to validate
+          schema:
+            type: string
+            enum: [jql, regex]
+          example: "jql"
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+              examples:
+                valid_query:
+                  summary: Valid JQL query
+                  value:
+                    valid: true
+                    error: null
+                    mode: "jql"
+                    query: 'project = ROX AND status = "Open"'
+                invalid_query:
+                  summary: Invalid JQL query
+                  value:
+                    valid: false
+                    error: "Unsupported JQL field: invalid_field"
+                    mode: "jql"
+                    query: 'invalid_field = "value"'
+        '400':
+          description: Bad request (missing parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+
+  /config:
+    get:
+      summary: Get client configuration
+      description: |
+        Retrieve public configuration settings needed by client applications.
+        Does not include sensitive information like API keys or passwords.
+      operationId: getConfig
+      tags:
+        - System
+      responses:
+        '200':
+          description: Public configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+              example:
+                jira_url: "https://issues.example.com"
+                jira_base_url: "https://issues.example.com"
+                search_max_results: 1000
+
+  /status:
+    get:
+      summary: Get system status
+      description: |
+        Get current system status, database statistics, and health information.
+        Useful for monitoring and troubleshooting.
+      operationId: getStatus
+      tags:
+        - System
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: "healthy"
+                database:
+                  total_issues: 11514
+                  last_sync: "2025-08-06T12:40:38.329316"
+                  last_sync_query: "project = ROX AND labels not in (CI_Failure)"
+                  database_size_mb: 129.1
+                config:
+                  jira_url: "https://issues.example.com"
+                  search_max_results: 1000
+                  custom_fields_count: 4
+        '500':
+          description: System error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: "error"
+                error: "Database connection failed"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+  schemas:
+    SearchResponse:
+      type: object
+      required:
+        - results
+        - total
+        - query
+        - mode
+        - limit
+        - offset
+        - query_time_ms
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+          description: Array of matching issues
+        total:
+          type: integer
+          description: Total number of matching issues (for pagination)
+          example: 1523
+        query:
+          type: string
+          description: The search query that was executed
+          example: "security vulnerability"
+        mode:
+          type: string
+          enum: [natural, jql, regex]
+          description: Search mode used
+          example: "natural"
+        limit:
+          type: integer
+          description: Maximum results requested
+          example: 100
+        offset:
+          type: integer
+          description: Pagination offset
+          example: 0
+        query_time_ms:
+          type: integer
+          description: Query execution time in milliseconds
+          example: 245
+
+    Issue:
+      type: object
+      required:
+        - key
+        - summary
+        - status_name
+        - priority_name
+        - project_key
+        - issue_type
+        - created
+        - updated
+      properties:
+        key:
+          type: string
+          description: Jira issue key
+          example: "ROX-12345"
+        summary:
+          type: string
+          description: Issue summary/title
+          example: "Fix security vulnerability in authentication"
+        description:
+          type: string
+          description: Issue description
+          example: "Detailed description of the security issue and proposed solution..."
+        status_name:
+          type: string
+          description: Current issue status
+          example: "Open"
+        priority_name:
+          type: string
+          description: Issue priority
+          example: "High"
+        assignee_display_name:
+          type: string
+          nullable: true
+          description: Assigned user display name
+          example: "John Doe"
+        reporter_display_name:
+          type: string
+          nullable: true
+          description: Reporter display name
+          example: "Jane Smith"
+        created:
+          type: string
+          format: date-time
+          description: Issue creation timestamp
+          example: "2025-01-15T10:30:00.000+0000"
+        updated:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-01-20T14:22:00.000+0000"
+        project_key:
+          type: string
+          description: Project key
+          example: "ROX"
+        project_name:
+          type: string
+          description: Project name
+          example: "Red Hat Advanced Cluster Security"
+        issue_type:
+          type: string
+          description: Type of issue
+          example: "Bug"
+        labels:
+          type: string
+          description: Comma-separated labels
+          example: "security, authentication, critical"
+        components:
+          type: string
+          description: Comma-separated components
+          example: "Security, Authentication"
+        custom_fields:
+          type: object
+          description: Custom field values
+          properties:
+            px_impact_score:
+              type: number
+              nullable: true
+              description: Product experience impact score
+              example: 8.5
+            product_manager:
+              type: string
+              nullable: true
+              description: Product manager name
+              example: "Jane Smith"
+            work_type:
+              type: string
+              nullable: true
+              description: Type of work
+              example: "Bug Fix"
+            team:
+              type: string
+              nullable: true
+              description: Assigned team
+              example: "Security Team"
+
+    IssueDetail:
+      allOf:
+        - $ref: '#/components/schemas/Issue'
+        - type: object
+          properties:
+            status:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "1"
+                name:
+                  type: string
+                  example: "Open"
+            priority:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "2"
+                name:
+                  type: string
+                  example: "High"
+            assignee:
+              type: object
+              nullable: true
+              properties:
+                key:
+                  type: string
+                  example: "jdoe"
+                name:
+                  type: string
+                  example: "jdoe"
+                display_name:
+                  type: string
+                  example: "John Doe"
+            reporter:
+              type: object
+              nullable: true
+              properties:
+                key:
+                  type: string
+                  example: "manager"
+                name:
+                  type: string
+                  example: "manager"
+                display_name:
+                  type: string
+                  example: "Project Manager"
+            comments:
+              type: string
+              description: All issue comments combined
+              example: "Initial analysis shows the vulnerability affects the authentication module..."
+            project:
+              type: object
+              properties:
+                key:
+                  type: string
+                  example: "ROX"
+                name:
+                  type: string
+                  example: "Red Hat Advanced Cluster Security"
+            jira_url:
+              type: string
+              format: uri
+              description: Direct link to issue in Jira
+              example: "https://issues.example.com/browse/ROX-12345"
+
+    SuggestionsResponse:
+      type: object
+      required:
+        - suggestions
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Suggestion'
+          description: Array of search suggestions
+
+    Suggestion:
+      type: object
+      required:
+        - type
+        - value
+        - label
+        - icon
+      properties:
+        type:
+          type: string
+          description: Type of suggestion
+          enum: [issue_key, assignee, team, summary, jql_field, jql_example, jql_value, regex_pattern, regex_completion]
+          example: "issue_key"
+        value:
+          type: string
+          description: Suggested value to use in search
+          example: "ROX-12345"
+        label:
+          type: string
+          description: Human-readable label for display
+          example: "🎫 ROX-12345 - Fix security vulnerability in authentication"
+        icon:
+          type: string
+          description: Emoji icon for visual identification
+          example: "🎫"
+
+    ValidationResponse:
+      type: object
+      required:
+        - valid
+        - mode
+        - query
+      properties:
+        valid:
+          type: boolean
+          description: Whether the query is valid
+          example: true
+        error:
+          type: string
+          nullable: true
+          description: Error message if invalid
+          example: "Unsupported JQL field: invalid_field"
+        mode:
+          type: string
+          enum: [jql, regex]
+          description: Query mode that was validated
+          example: "jql"
+        query:
+          type: string
+          description: Query that was validated
+          example: 'project = ROX AND status = "Open"'
+
+    ConfigResponse:
+      type: object
+      required:
+        - jira_url
+        - jira_base_url
+        - search_max_results
+      properties:
+        jira_url:
+          type: string
+          format: uri
+          description: Base Jira URL
+          example: "https://issues.example.com"
+        jira_base_url:
+          type: string
+          format: uri
+          description: Base Jira URL without trailing slash
+          example: "https://issues.example.com"
+        search_max_results:
+          type: integer
+          description: Maximum results per search request
+          example: 1000
+
+    StatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [healthy, error]
+          description: Overall system status
+          example: "healthy"
+        database:
+          type: object
+          description: Database statistics (when healthy)
+          properties:
+            total_issues:
+              type: integer
+              example: 11514
+            last_sync:
+              type: string
+              format: date-time
+              example: "2025-08-06T12:40:38.329316"
+            last_sync_query:
+              type: string
+              example: "project = ROX AND labels not in (CI_Failure)"
+            database_size_mb:
+              type: number
+              example: 129.1
+        config:
+          type: object
+          description: Configuration summary (when healthy)
+          properties:
+            jira_url:
+              type: string
+              format: uri
+              example: "https://issues.example.com"
+            search_max_results:
+              type: integer
+              example: 1000
+            custom_fields_count:
+              type: integer
+              example: 4
+        error:
+          type: string
+          description: Error message (when status is error)
+          example: "Database connection failed"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - results
+        - total
+        - query_time_ms
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Database error: Connection failed"
+        results:
+          type: array
+          items: {}
+          description: Empty results array
+          example: []
+        total:
+          type: integer
+          description: Total count (always 0 for errors)
+          example: 0
+        query_time_ms:
+          type: integer
+          description: Time spent processing the request
+          example: 15
+
+tags:
+  - name: Search
+    description: Search and suggestion operations
+  - name: Issues
+    description: Issue detail operations
+  - name: Validation
+    description: Query validation operations
+  - name: System
+    description: System status and configuration
