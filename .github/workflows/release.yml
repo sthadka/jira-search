@@ -60,8 +60,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Install semantic-release dependencies
+      - name: Install dependencies
         run: |
+          apk add --no-cache git
           npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github @semantic-release/exec
         
       - name: Run semantic-release
