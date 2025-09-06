@@ -52,23 +52,21 @@ jobs:
     outputs:
       version: ${{ steps.semantic.outputs.new_release_version }}
       released: ${{ steps.semantic.outputs.new_release_published }}
+    container:
+      image: node:18-alpine
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          
-      - name: Install semantic-release
-        run: npm ci
+      - name: Install semantic-release dependencies
+        run: |
+          npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github @semantic-release/exec
         
       - name: Run semantic-release
         id: semantic
-        run: npx semantic-release
+        run: semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
