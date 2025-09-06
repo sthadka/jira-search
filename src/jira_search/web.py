@@ -122,7 +122,7 @@ def _get_summary_suggestions(
                 "type": "summary",
                 "value": result["key"],
                 "label": f"📄 {result['key']}: {result['summary'][:60]}"
-                + ("..." if len(result['summary']) > 60 else ""),
+                + ("..." if len(result["summary"]) > 60 else ""),
                 "icon": "📄",
             }
             for result in results

@@ -615,9 +615,9 @@ class Database:
                     # Handle various field types (text, select, etc.)
                     if isinstance(field_value, dict):
                         processed[field_id] = (
-                            field_value.get("value") or
-                            field_value.get("name") or
-                            str(field_value)
+                            field_value.get("value")
+                            or field_value.get("name")
+                            or str(field_value)
                         )
                     elif isinstance(field_value, list) and field_value:
                         # Multi-select fields
