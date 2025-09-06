@@ -255,7 +255,8 @@ class Database:
         # Insert initial row if not exists
         conn.execute(
             """
-            INSERT OR IGNORE INTO sync_metadata (id, last_sync_time, last_sync_query, last_full_sync)
+            INSERT OR IGNORE INTO sync_metadata
+            (id, last_sync_time, last_sync_query, last_full_sync)
             VALUES (1, NULL, NULL, NULL)
         """
         )

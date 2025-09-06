@@ -121,7 +121,8 @@ def _get_summary_suggestions(
             {
                 "type": "summary",
                 "value": result["key"],
-                "label": f"📄 {result['key']}: {result['summary'][:60]}{'...' if len(result['summary']) > 60 else ''}",
+                "label": f"📄 {result['key']}: {result['summary'][:60]}"
+                + ("..." if len(result['summary']) > 60 else ""),
                 "icon": "📄",
             }
             for result in results
@@ -735,11 +736,13 @@ def create_app(config: Config) -> Flask:
         <html>
         <head>
             <title>Jira Search API Documentation</title>
-            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+            <link rel="stylesheet" type="text/css"
+                  href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
         </head>
         <body>
             <div id="swagger-ui"></div>
-            <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+            <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js">
+            </script>
             <script>
                 SwaggerUIBundle({
                     url: '/api/v1/docs',

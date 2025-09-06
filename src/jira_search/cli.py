@@ -125,9 +125,10 @@ def validate_config(ctx, detailed: bool):
             if config.custom_fields:
                 click.echo(f"  • Custom fields: {len(config.custom_fields)} configured")
                 for field in config.custom_fields:
-                    click.echo(
-                        f"    - {field.get('name', 'Unnamed')} ({field.get('id')}) [{field.get('type', 'text')}]"
-                    )
+                    field_name = field.get('name', 'Unnamed')
+                    field_id = field.get('id')
+                    field_type = field.get('type', 'text')
+                    click.echo(f"    - {field_name} ({field_id}) [{field_type}]")
             else:
                 click.echo("  • Custom fields: None configured")
 
@@ -820,9 +821,9 @@ def status(ctx):
             click.echo()
             click.echo("🗑️  Deleted Issues:")
             click.echo(f"  Recently deleted: {total_deleted} issues")
-            click.echo(
-                f"  Most recent: {deleted_issues[0]['key']} at {deleted_issues[0]['deleted_at'][:19]}"
-            )
+            recent_key = deleted_issues[0]['key']
+            recent_date = deleted_issues[0]['deleted_at'][:19]
+            click.echo(f"  Most recent: {recent_key} at {recent_date}")
 
     except ConfigError as e:
         click.echo(f"✗ Configuration error: {e}", err=True)

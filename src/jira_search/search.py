@@ -270,12 +270,16 @@ class AdvancedSearch:
 
             # Special handling for labels and components fields
             if db_column in ["labels", "components"]:
-                # For labels/components with IN, we need to check if any of the values exist in the comma-separated list
+                # For labels/components with IN, check if any values exist
+                # in the comma-separated list
                 conditions = []
                 all_params = []
                 for value in values:
                     # Each value can be: exact match, first item, middle item, or last item
-                    condition_parts = f"({db_column} = ? OR {db_column} LIKE ? OR {db_column} LIKE ? OR {db_column} LIKE ?)"
+                    condition_parts = (
+                        f"({db_column} = ? OR {db_column} LIKE ? OR "
+                        f"{db_column} LIKE ? OR {db_column} LIKE ?)"
+                    )
                     conditions.append(condition_parts)
                     all_params.extend(
                         [value, f"{value},%", f"%, {value}", f"%, {value},%"]
@@ -317,7 +321,10 @@ class AdvancedSearch:
                 if sql_op == "=":
                     # For labels/components, = means "contains this label"
                     # Use LIKE with word boundary patterns to avoid partial matches
-                    sql_condition = f"({db_column} = ? OR {db_column} LIKE ? OR {db_column} LIKE ? OR {db_column} LIKE ?)"
+                    sql_condition = (
+                        f"({db_column} = ? OR {db_column} LIKE ? OR "
+                        f"{db_column} LIKE ? OR {db_column} LIKE ?)"
+                    )
                     return sql_condition, [
                         value,
                         f"{value},%",
@@ -326,7 +333,11 @@ class AdvancedSearch:
                     ]
                 elif sql_op == "!=":
                     # For labels/components, != means "does not contain this label"
-                    sql_condition = f"({db_column} IS NULL OR ({db_column} != ? AND {db_column} NOT LIKE ? AND {db_column} NOT LIKE ? AND {db_column} NOT LIKE ?))"
+                    sql_condition = (
+                        f"({db_column} IS NULL OR ({db_column} != ? AND "
+                        f"{db_column} NOT LIKE ? AND {db_column} NOT LIKE ? AND "
+                        f"{db_column} NOT LIKE ?))"
+                    )
                     return sql_condition, [
                         value,
                         f"{value},%",
