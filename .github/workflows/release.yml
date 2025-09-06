@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
 env:
   REGISTRY: quay.io
   IMAGE_NAME: sthadka/jira-search
