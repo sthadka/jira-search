@@ -3,11 +3,17 @@
 import time
 import logging
 import sqlite3
+import os
+import yaml
 from typing import List, Dict, Any
 from flask import Flask, render_template, request, jsonify
 from jira_search.config import Config
 from jira_search.database import Database, DatabaseError
 from jira_search.search import AdvancedSearch, SearchError, JQLError, RegexError
+from jira_search.api_auth import (
+    apply_rate_limit, optional_api_key, require_api_key, 
+    add_api_info_headers
+)
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +233,10 @@ def create_app(config: Config) -> Flask:
             logger.error(f"Database error: {e}")
             return render_template('error.html', error="Database not available"), 500
     
-    @app.route('/api/search')
+    @app.route('/api/v1/search')
+    @app.route('/api/search')  # Backward compatibility
+    @apply_rate_limit
+    @optional_api_key
     def api_search():
         """Search API endpoint.
         
@@ -325,7 +334,10 @@ def create_app(config: Config) -> Flask:
                 'query_time_ms': int((time.time() - start_time) * 1000)
             }), 500
     
-    @app.route('/api/suggest')
+    @app.route('/api/v1/suggest')
+    @app.route('/api/suggest')  # Backward compatibility
+    @apply_rate_limit
+    @optional_api_key
     def api_suggest():
         """Type-ahead suggestions API endpoint.
         
@@ -379,7 +391,10 @@ def create_app(config: Config) -> Flask:
             logger.error(f"Suggestion error: {e}")
             return jsonify({'suggestions': []})
     
-    @app.route('/api/issues/<issue_key>')
+    @app.route('/api/v1/issues/<issue_key>')
+    @app.route('/api/issues/<issue_key>')  # Backward compatibility
+    @apply_rate_limit
+    @optional_api_key
     def api_issue_detail(issue_key):
         """Get detailed information for a specific issue.
         
@@ -452,7 +467,10 @@ def create_app(config: Config) -> Flask:
             logger.error(f"Issue detail error: {e}")
             return jsonify({'error': 'Internal server error'}), 500
     
-    @app.route('/api/validate')
+    @app.route('/api/v1/validate')
+    @app.route('/api/validate')  # Backward compatibility
+    @apply_rate_limit
+    @optional_api_key
     def api_validate():
         """Validate JQL or regex query syntax.
         
@@ -498,7 +516,9 @@ def create_app(config: Config) -> Flask:
                 'error': f'Validation failed: {str(e)}'
             }), 500
     
-    @app.route('/api/config')
+    @app.route('/api/v1/config')
+    @app.route('/api/config')  # Backward compatibility
+    @optional_api_key
     def api_config():
         """Get client configuration (public settings only)."""
         try:
@@ -513,7 +533,9 @@ def create_app(config: Config) -> Flask:
                 'error': 'Failed to get configuration'
             }), 500
     
-    @app.route('/api/status')
+    @app.route('/api/v1/status')
+    @app.route('/api/status')  # Backward compatibility
+    @optional_api_key
     def api_status():
         """Get application status and statistics."""
         try:
@@ -539,6 +561,130 @@ def create_app(config: Config) -> Flask:
                 'error': str(e)
             }), 500
     
+    @app.route('/api/v1/auth/info')
+    @require_api_key
+    def api_auth_info():
+        """Get information about the current API key."""
+        try:
+            api_key_info = getattr(request, 'api_key_info', {})
+            return jsonify({
+                'name': api_key_info.get('name', 'Unknown'),
+                'created': api_key_info.get('created', 'Unknown'),
+                'rate_limit': api_key_info.get('rate_limit', 60),
+                'enabled': api_key_info.get('enabled', False)
+            })
+        except Exception as e:
+            logger.error(f"Auth info error: {e}")
+            return jsonify({
+                'error': 'Failed to get authentication info'
+            }), 500
+    
+    @app.route('/api/v1')
+    def api_v1_info():
+        """API version 1 information."""
+        return jsonify({
+            'version': '1.0.0',
+            'name': 'Jira Search Mirror API',
+            'description': 'Fast local Jira search interface',
+            'documentation': '/api/v1/docs',
+            'endpoints': {
+                'search': '/api/v1/search',
+                'suggest': '/api/v1/suggest',
+                'issues': '/api/v1/issues/{key}',
+                'validate': '/api/v1/validate',
+                'config': '/api/v1/config',
+                'status': '/api/v1/status',
+                'auth_info': '/api/v1/auth/info'
+            },
+            'authentication': {
+                'type': 'API Key',
+                'header': 'X-API-Key',
+                'required': False,
+                'note': 'API key provides higher rate limits'
+            },
+            'rate_limits': {
+                'anonymous': '30 requests/minute',
+                'authenticated': '60-300 requests/minute (depends on key)'
+            }
+        })
+    
+    @app.route('/api/v1/docs')
+    def api_v1_docs():
+        """Serve OpenAPI documentation."""
+        try:
+            # Look for OpenAPI spec file
+            possible_paths = [
+                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'api', 'openapi.yaml'),
+                'api/openapi.yaml',
+                'openapi.yaml'
+            ]
+            
+            openapi_spec = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    with open(path, 'r') as f:
+                        openapi_spec = yaml.safe_load(f)
+                    break
+            
+            if openapi_spec:
+                # Update server URLs to match current request
+                if 'servers' not in openapi_spec:
+                    openapi_spec['servers'] = []
+                
+                current_server = {
+                    'url': f"{request.scheme}://{request.host}/api",
+                    'description': 'Current server'
+                }
+                
+                # Add current server as first option
+                openapi_spec['servers'].insert(0, current_server)
+                
+                return jsonify(openapi_spec)
+            else:
+                return jsonify({
+                    'error': 'OpenAPI specification not found',
+                    'message': 'The API documentation is not available'
+                }), 404
+                
+        except Exception as e:
+            logger.error(f"Docs error: {e}")
+            return jsonify({
+                'error': 'Failed to load API documentation',
+                'message': str(e)
+            }), 500
+    
+    @app.route('/api/v1/docs/ui')
+    def api_v1_docs_ui():
+        """Serve interactive API documentation UI."""
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Jira Search Mirror API Documentation</title>
+            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+        </head>
+        <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+            <script>
+                SwaggerUIBundle({
+                    url: '/api/v1/docs',
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIBundle.presets.standalone
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: "StandaloneLayout"
+                });
+            </script>
+        </body>
+        </html>
+        """
+    
     @app.errorhandler(404)
     def not_found(error):
         """Handle 404 errors."""
@@ -548,5 +694,12 @@ def create_app(config: Config) -> Flask:
     def internal_error(error):
         """Handle 500 errors."""
         return jsonify({'error': 'Internal server error'}), 500
+    
+    @app.after_request
+    def after_request(response):
+        """Add headers to all responses."""
+        if request.path.startswith('/api/'):
+            response = add_api_info_headers(response)
+        return response
     
     return app

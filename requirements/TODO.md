@@ -263,6 +263,76 @@
 
 ---
 
+## Phase 11: Containerization & Kubernetes Deployment (Week 11)
+**Goal**: Production-ready containerized deployment on Kubernetes with best practices
+
+### 11.1 Container Image Creation
+- [ ] Create optimized Dockerfile with multi-stage build
+- [ ] Implement container security best practices (non-root user, minimal base image)
+- [ ] Use buildah/podman for rootless container building
+- [ ] Add health checks and proper signal handling
+- [ ] Optimize image size and build time with layer caching
+
+### 11.2 Container Configuration & Security
+- [ ] Implement proper secrets management (config.yaml via ConfigMap/Secret)
+- [ ] Add resource limits and requests specification
+- [ ] Configure proper logging for container environments
+- [ ] Implement graceful shutdown handling (SIGTERM)
+- [ ] Add container security scanning in build pipeline
+
+### 11.3 Helm Chart Development
+- [ ] Create Helm chart with proper templating structure
+- [ ] Implement values.yaml with comprehensive configuration options
+- [ ] Add ConfigMap and Secret templates for application configuration
+- [ ] Create Service, Deployment, and Ingress templates
+- [ ] Implement proper resource management (CPU/memory limits)
+
+### 11.4 Kubernetes Best Practices
+- [ ] Implement Pod Security Standards (restricted security context)
+- [ ] Add readiness and liveness probes for health checking
+- [ ] Configure HorizontalPodAutoscaler for automatic scaling
+- [ ] Implement NetworkPolicies for micro-segmentation
+- [ ] Add PodDisruptionBudget for high availability
+
+### 11.5 Persistent Storage & Data Management
+- [ ] Design StatefulSet vs Deployment strategy for database
+- [ ] Implement PersistentVolumeClaim for SQLite database storage
+- [ ] Add backup and restore procedures for database
+- [ ] Configure init containers for database migrations
+- [ ] Implement data persistence across pod restarts
+
+### 11.6 Service Mesh & Networking
+- [ ] Configure Kubernetes Services (ClusterIP, LoadBalancer)
+- [ ] Implement Ingress with TLS termination
+- [ ] Add service mesh integration (Istio/Linkerd) for observability
+- [ ] Configure proper DNS and service discovery
+- [ ] Implement rate limiting at ingress level
+
+### 11.7 Monitoring & Observability
+- [ ] Add Prometheus metrics endpoint to application
+- [ ] Create ServiceMonitor for Prometheus scraping
+- [ ] Implement distributed tracing with OpenTelemetry
+- [ ] Add structured logging with correlation IDs
+- [ ] Create Grafana dashboards for application metrics
+
+### 11.8 CI/CD Pipeline Integration
+- [ ] Create GitHub Actions workflow for container building
+- [ ] Implement security scanning (Trivy, Snyk) in pipeline
+- [ ] Add Helm chart testing and validation
+- [ ] Implement GitOps deployment strategy (ArgoCD/Flux)
+- [ ] Add automated rollback on deployment failures
+
+### 11.9 Production Environment Configuration
+- [ ] Implement multiple environment support (dev/staging/prod)
+- [ ] Configure resource quotas and limits per environment
+- [ ] Add environment-specific secret management
+- [ ] Implement proper RBAC (Role-Based Access Control)
+- [ ] Configure cluster-level security policies
+
+**Validation**: Application runs reliably on Kubernetes with production-grade reliability, security, and observability
+
+---
+
 ## Success Criteria for Each Phase
 
 **Phase 1**: ✅ Can connect to Jira via config file and create database  
@@ -275,6 +345,7 @@
 **Phase 8**: ✅ Can be configured via config files for different team needs  
 **Phase 9**: ✅ External tools can integrate successfully  
 **Phase 10**: ✅ Production ready with essential logging and docs  
+**Phase 11**: ✅ Deployed on Kubernetes with production-grade reliability and security  
 
 ## Notes for Implementation
 
