@@ -9,6 +9,17 @@ from pathlib import Path
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """Set up test environment before running tests."""
+    # Set required environment variables for testing if not already set
+    test_env_vars = {
+        'JIRA_URL': 'https://test-jira.example.com',
+        'JIRA_USERNAME': 'test-user',
+        'JIRA_PAT': 'test-token'
+    }
+    
+    for var, value in test_env_vars.items():
+        if var not in os.environ:
+            os.environ[var] = value
+    
     # Copy config.yaml.example to config.yaml if it doesn't exist
     config_example = Path("config.yaml.example")
     config_file = Path("config.yaml")
