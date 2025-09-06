@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "jira-search.fullname" . }}-config
+  labels:
+    {{- include "jira-search.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    jira:
+      url: {{ .Values.config.jira_url | quote }}
+      username: {{ .Values.config.jira_username | quote }}
+      pat: "${JIRA_PAT}"  # Will be injected from secret
+
+    sync:
+      {{- if .Values.config.sync_project_key }}
+      project_key: {{ .Values.config.sync_project_key | quote }}
+      {{- end }}
+      rate_limit: {{ .Values.config.sync_rate_limit | default 100 }}
+      batch_size: {{ .Values.config.sync_batch_size | default 100 }}
+
+    search:
+      max_results: {{ .Values.config.search_max_results | default 1000 }}
+      timeout_seconds: {{ .Values.config.search_timeout_seconds | default 5 }}
+
+    database:
+      path: {{ .Values.config.database_path | default "/app/data/jira_search.db" | quote }}
+
+    {{- if .Values.config.custom_fields }}
+    custom_fields:
+      {{- toYaml .Values.config.custom_fields | nindent 6 }}
+    {{- else }}
+    custom_fields: []
+    {{- end }}

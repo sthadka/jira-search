@@ -1,0 +1,118 @@
+# Image configuration
+image:
+  repository: quay.io/sthadka/jira-search
+  tag: ""  # Will be set by CI/CD pipeline
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: jira-search.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Persistence for SQLite database
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+# Resource limits
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Configuration stored in ConfigMap
+config:
+  # Jira connection settings (non-sensitive)
+  jira_url: "https://your-jira.company.com"
+  jira_username: "your-username"
+  
+  # Database and sync settings
+  database_path: "/app/data/jira_search.db"
+  search_timeout_seconds: 5
+  search_max_results: 1000
+  sync_batch_size: 100
+  sync_rate_limit: 100
+  sync_project_key: "PROJ"
+  
+  # Custom fields configuration
+  custom_fields: []
+
+# Secrets (sensitive data)
+secrets:
+  # Jira Personal Access Token
+  jira_pat: "your-personal-access-token"
+
+# Jobs configuration
+jobs:
+  # Initial full sync job
+  initSync:
+    enabled: true
+    restartPolicy: OnFailure
+    backoffLimit: 3
+    
+  # Incremental sync cron job (every 15 minutes)
+  incrementalSync:
+    enabled: true
+    schedule: "*/15 * * * *"
+    concurrencyPolicy: Forbid
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 1
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Node selector, tolerations, and affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Replica count
+replicaCount: 1
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /api/status
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /api/status
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5

@@ -1,0 +1,60 @@
+{{- if .Values.jobs.incrementalSync.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "jira-search.fullname" . }}-incremental-sync
+  labels:
+    {{- include "jira-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: incremental-sync
+spec:
+  schedule: {{ .Values.jobs.incrementalSync.schedule | quote }}
+  concurrencyPolicy: {{ .Values.jobs.incrementalSync.concurrencyPolicy | default "Forbid" }}
+  successfulJobsHistoryLimit: {{ .Values.jobs.incrementalSync.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ .Values.jobs.incrementalSync.failedJobsHistoryLimit | default 1 }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "jira-search.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: incremental-sync
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "jira-search.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+          - name: incremental-sync
+            securityContext:
+              {{- toYaml .Values.securityContext | nindent 14 }}
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            command: ["python", "-m", "jira_search", "sync", "--incremental"]
+            env:
+            - name: JIRA_PAT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jira-search.fullname" . }}-secrets
+                  key: jira-pat
+            - name: CONFIG_PATH
+              value: "/app/config.yaml"
+            volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+            resources:
+              {{- toYaml .Values.resources | nindent 14 }}
+          volumes:
+          - name: data
+            {{- if .Values.persistence.enabled }}
+            persistentVolumeClaim:
+              claimName: {{ include "jira-search.fullname" . }}-data
+            {{- else }}
+            emptyDir: {}
+            {{- end }}
+          - name: config
+            configMap:
+              name: {{ include "jira-search.fullname" . }}-config
+{{- end }}
