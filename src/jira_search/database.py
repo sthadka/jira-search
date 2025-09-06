@@ -125,9 +125,10 @@ class Database:
         # Clean up any empty or invalid columns
         all_columns = [col.strip() for col in all_columns if col.strip()]
         
+        columns_str = ',\n    '.join(all_columns)
         sql = f"""
         CREATE TABLE IF NOT EXISTS issues (
-            {',\n    '.join(all_columns)}
+            {columns_str}
         )
         """
         
