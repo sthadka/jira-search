@@ -45,16 +45,61 @@ config:
   jira_url: "https://your-jira.company.com"
   jira_username: "your-username"
   
-  # Database and sync settings
-  database_path: "/app/data/jira_search.db"
-  search_timeout_seconds: 5
-  search_max_results: 1000
-  sync_batch_size: 100
-  sync_rate_limit: 100
-  sync_project_key: "PROJ"
+  # Sync configuration
+  sync_project_key: ""  # Project key to sync (optional, use either this or jql)
+  sync_jql: ""  # Custom JQL query for syncing (optional, use either this or project_key)
+  sync_rate_limit: 100  # API rate limiting (requests per minute)
+  sync_batch_size: 100  # Batch size for syncing issues
+  
+  # Search configuration
+  search_max_results: 1000  # Maximum search results to return
+  search_timeout_seconds: 5  # Search timeout in seconds
+  
+  # Database configuration
+  database_path: "/app/data/jira_search.db"  # Database file path
+  
+  # Field configuration
+  fields:
+    # Core Jira fields to fetch and store
+    core:
+      - "key"
+      - "summary"
+      - "description"
+      - "status"
+      - "priority"
+      - "assignee"
+      - "reporter"
+      - "created"
+      - "updated"
+      - "comment"
+      - "labels"
+      - "components"
+      - "issuetype"
+      - "project"
+      - "fixVersions"
+      - "affectedVersions"
+    # Fields to include in full-text search index
+    search:
+      - "key"
+      - "summary"
+      - "description"
+      - "comment"
+      - "labels"
   
   # Custom fields configuration
   custom_fields: []
+  
+  # Performance tuning
+  performance:
+    cache_queries: true  # Enable query caching
+    cache_ttl: 300  # Cache TTL in seconds
+    db_pool_size: 5  # Database connection pool size
+  
+  # Logging configuration
+  logging:
+    level: "INFO"  # Log level (DEBUG, INFO, WARNING, ERROR)
+    file: ""  # Log file path (empty for console logging)
+    structured: false  # Enable structured logging
 
 # Secrets (sensitive data)
 secrets:

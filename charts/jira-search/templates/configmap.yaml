@@ -6,28 +6,79 @@ metadata:
     {{- include "jira-search.labels" . | nindent 4 }}
 data:
   config.yaml: |
-    jira:
-      url: {{ .Values.config.jira_url | quote }}
-      username: {{ .Values.config.jira_username | quote }}
-      pat: "${JIRA_PAT}"  # Will be injected from secret
+    # Jira Search Configuration
+    # This file supports environment variable substitution using ${VAR_NAME} or ${VAR_NAME:default}
 
+    # Jira Connection Settings
+    jira:
+      # Jira instance URL (required)
+      url: {{ .Values.config.jira_url | quote }}
+      # Jira username (required)
+      username: {{ .Values.config.jira_username | quote }}
+      # Personal Access Token (required) - injected from secret
+      pat: "${JIRA_PAT}"
+
+    # Sync Configuration
     sync:
       {{- if .Values.config.sync_project_key }}
+      # Project key to sync (optional, use either this or jql)
       project_key: {{ .Values.config.sync_project_key | quote }}
       {{- end }}
+      {{- if .Values.config.sync_jql }}
+      # Custom JQL query for syncing (optional, use either this or project_key)
+      jql: {{ .Values.config.sync_jql | quote }}
+      {{- end }}
+      # API rate limiting (requests per minute, default: 100)
       rate_limit: {{ .Values.config.sync_rate_limit | default 100 }}
+      # Batch size for syncing issues (default: 100)
       batch_size: {{ .Values.config.sync_batch_size | default 100 }}
 
+    # Search Configuration
     search:
+      # Maximum search results to return (default: 1000)
       max_results: {{ .Values.config.search_max_results | default 1000 }}
+      # Search timeout in seconds (default: 5)
       timeout_seconds: {{ .Values.config.search_timeout_seconds | default 5 }}
 
+    # Database Configuration
     database:
+      # Database file path (default: jira_search.db)
       path: {{ .Values.config.database_path | default "/app/data/jira_search.db" | quote }}
 
+    # Field Configuration
+    fields:
+      # Core Jira fields to fetch and store (required: key, summary)
+      core:
+        {{- toYaml .Values.config.fields.core | nindent 8 }}
+      # Fields to include in full-text search index (subset of core)
+      search:
+        {{- toYaml .Values.config.fields.search | nindent 8 }}
+
+    # Custom Fields Configuration
+    # Add any custom fields you want to include in search and display
     {{- if .Values.config.custom_fields }}
     custom_fields:
       {{- toYaml .Values.config.custom_fields | nindent 6 }}
     {{- else }}
     custom_fields: []
     {{- end }}
+
+    # Performance Tuning (optional)
+    performance:
+      # Enable query caching (default: true)
+      cache_queries: {{ .Values.config.performance.cache_queries | default true }}
+      # Cache TTL in seconds (default: 300)
+      cache_ttl: {{ .Values.config.performance.cache_ttl | default 300 }}
+      # Database connection pool size (default: 5)
+      db_pool_size: {{ .Values.config.performance.db_pool_size | default 5 }}
+
+    # Logging Configuration (optional)
+    logging:
+      # Log level (DEBUG, INFO, WARNING, ERROR, default: INFO)
+      level: {{ .Values.config.logging.level | default "INFO" | quote }}
+      {{- if .Values.config.logging.file }}
+      # Log file path (optional, logs to console if not specified)
+      file: {{ .Values.config.logging.file | quote }}
+      {{- end }}
+      # Enable structured logging (default: false)
+      structured: {{ .Values.config.logging.structured | default false }}
