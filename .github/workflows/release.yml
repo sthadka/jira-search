@@ -5,6 +5,13 @@ on:
     branches: [main, beta]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build and push container even without new release'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -56,8 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'
     outputs:
-      version: ${{ steps.semantic.outputs.new_release_version }}
-      released: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,14 +82,18 @@ jobs:
         
       - name: Run semantic-release
         id: semantic
-        run: semantic-release
+        run: |
+          echo "Running semantic-release..."
+          semantic-release
+          echo "new_release_published=$NEW_RELEASE_PUBLISHED" >> $GITHUB_OUTPUT
+          echo "new_release_version=$NEW_RELEASE_VERSION" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
     needs: release
     runs-on: ubuntu-latest
-    if: needs.release.outputs.released == 'true'
+    if: needs.release.outputs.new_release_published == 'true' || github.event.inputs.force_build == 'true'
     steps:
       - uses: actions/checkout@v4
       
@@ -100,8 +111,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=v${{ needs.release.outputs.version }}
-            type=raw,value=${{ needs.release.outputs.version }}
+            type=raw,value=v${{ needs.release.outputs.new_release_version }},enable=${{ needs.release.outputs.new_release_published == 'true' }}
+            type=raw,value=${{ needs.release.outputs.new_release_version }},enable=${{ needs.release.outputs.new_release_published == 'true' }}
+            type=raw,value=dev-${{ github.sha }},enable=${{ github.event.inputs.force_build == 'true' }}
             
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -111,4 +123,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=${{ needs.release.outputs.version }}
+            VERSION=${{ needs.release.outputs.new_release_version || github.sha }}
