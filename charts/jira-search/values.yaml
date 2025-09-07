@@ -105,6 +105,9 @@ config:
 secrets:
   # Jira Personal Access Token
   jira_pat: "your-personal-access-token"
+  
+  # Additional annotations for the secret (optional)
+  annotations: {}
 
 # Jobs configuration
 jobs:
