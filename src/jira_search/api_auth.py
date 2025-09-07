@@ -77,15 +77,15 @@ class APIKeyManager:
     def __init__(self):
         # In production, these would come from a database or config
         self.api_keys = {
-            "dev-key-12345": {
-                "name": "Development Key",
-                "created": "2025-08-06",
+            "example-dev-key": {
+                "name": "Example Development Key",
+                "created": "2025-01-01",
                 "rate_limit": 120,  # requests per minute
                 "enabled": True,
             },
-            "prod-key-67890": {
-                "name": "Production Key",
-                "created": "2025-08-06",
+            "example-prod-key": {
+                "name": "Example Production Key",
+                "created": "2025-01-01",
                 "rate_limit": 300,  # requests per minute
                 "enabled": True,
             },
