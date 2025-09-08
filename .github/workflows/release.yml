@@ -84,9 +84,37 @@ jobs:
         id: semantic
         run: |
           echo "Running semantic-release..."
+          
+          # Get current latest tag before semantic-release
+          BEFORE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Tag before semantic-release: ${BEFORE_TAG}"
+          
+          # Run semantic-release and capture exit code
+          set +e
           semantic-release
-          echo "new_release_published=$NEW_RELEASE_PUBLISHED" >> $GITHUB_OUTPUT
-          echo "new_release_version=$NEW_RELEASE_VERSION" >> $GITHUB_OUTPUT
+          SEMANTIC_EXIT_CODE=$?
+          set -e
+          
+          echo "Semantic-release exit code: ${SEMANTIC_EXIT_CODE}"
+          
+          # Get latest tag after semantic-release
+          AFTER_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Tag after semantic-release: ${AFTER_TAG}"
+          
+          # Check if a new release was published
+          if [ "${BEFORE_TAG}" != "${AFTER_TAG}" ] && [ -n "${AFTER_TAG}" ]; then
+            echo "New release detected!"
+            echo "new_release_published=true" >> $GITHUB_OUTPUT
+            echo "new_release_version=${AFTER_TAG#v}" >> $GITHUB_OUTPUT
+            echo "Release published: true"
+            echo "Release version: ${AFTER_TAG#v}"
+          else
+            echo "No new release published"
+            echo "new_release_published=false" >> $GITHUB_OUTPUT
+            echo "new_release_version=" >> $GITHUB_OUTPUT
+            echo "Release published: false"
+            echo "Release version: none"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -95,6 +123,13 @@ jobs:
     runs-on: ubuntu-latest
     if: needs.release.outputs.new_release_published == 'true' || github.event.inputs.force_build == 'true'
     steps:
+      - name: Debug release outputs
+        run: |
+          echo "Release published: '${{ needs.release.outputs.new_release_published }}'"
+          echo "Release version: '${{ needs.release.outputs.new_release_version }}'"
+          echo "Force build: '${{ github.event.inputs.force_build }}'"
+          echo "Should build: ${{ needs.release.outputs.new_release_published == 'true' || github.event.inputs.force_build == 'true' }}"
+          
       - uses: actions/checkout@v4
       
       - name: Log in to Quay.io
