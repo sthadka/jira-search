@@ -1,12 +1,12 @@
-# Core dependencies for Jira Search
-requests>=2.31.0
-pyyaml>=6.0
-click>=8.1.0
-flask>=2.3.0
-gunicorn>=21.2.0
+# Core dependencies for Jira Search with security updates
+requests>=2.32.0
+pyyaml>=6.0.2
+click>=8.1.7
+flask>=3.1.0
+gunicorn>=23.0.0
 
-# Development dependencies
-pytest>=7.4.0
-pytest-cov>=4.1.0
-black>=23.0.0
-flake8>=6.0.0
+# Development dependencies with security updates
+pytest>=8.4.0
+pytest-cov>=6.3.0
+black>=25.1.0
+flake8>=7.3.0

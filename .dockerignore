@@ -1,0 +1,98 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and build artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache
+.mypy_cache
+
+# Development and testing
+.pytest_cache/
+tests/
+.coverage
+.tox/
+.cache/
+pytest.ini
+tox.ini
+.flake8
+
+# Documentation
+docs/
+*.md
+README*
+CHANGELOG*
+LICENSE*
+CONTRIBUTING*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Development tools
+.pre-commit-config.yaml
+.github/
+scripts/
+
+# Local development files
+config.yaml
+*.db
+*.sqlite
+*.sqlite3
+jira_search.db
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Security and secrets
+.env
+.env.*
+secrets/
+*.pem
+*.key
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+target/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# Backup files
+*.bak
+*.backup
