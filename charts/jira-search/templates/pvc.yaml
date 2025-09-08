@@ -5,6 +5,9 @@ metadata:
   name: {{ include "jira-search.fullname" . }}-data
   labels:
     {{- include "jira-search.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-1"
 spec:
   accessModes:
     {{- range .Values.persistence.accessModes }}
