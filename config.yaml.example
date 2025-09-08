@@ -36,6 +36,12 @@ search:
   # Search timeout in seconds (default: 5)
   timeout_seconds: 5
 
+# Web API Configuration
+api:
+  # Enable rate limiting for web API endpoints (default: true)
+  # Set to false to disable rate limiting for internal/trusted networks
+  enable_rate_limiting: true
+
 # Database Configuration
 database:
   # Database file path (default: jira_search.db)

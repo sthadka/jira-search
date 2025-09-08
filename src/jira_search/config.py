@@ -257,6 +257,7 @@ class Config:
         """Get sync batch size."""
         return self.data.get("sync", {}).get("batch_size", 100)
 
+
     @property
     def custom_fields(self) -> List[Dict[str, str]]:
         """Get custom fields configuration."""
@@ -271,6 +272,11 @@ class Config:
     def search_timeout_seconds(self) -> int:
         """Get search timeout in seconds."""
         return self.data.get("search", {}).get("timeout_seconds", 5)
+
+    @property
+    def api_enable_rate_limiting(self) -> bool:
+        """Get whether to enable web API rate limiting."""
+        return self.data.get("api", {}).get("enable_rate_limiting", True)
 
     @property
     def database_path(self) -> str:
@@ -434,6 +440,12 @@ search:
 
   # Search timeout in seconds (default: 5)
   timeout_seconds: 5
+
+# Web API Configuration
+api:
+  # Enable rate limiting for web API endpoints (default: true)
+  # Set to false to disable rate limiting for internal/trusted networks
+  enable_rate_limiting: true
 
 # Database Configuration
 database:

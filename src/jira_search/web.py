@@ -12,6 +12,7 @@ from jira_search.database import Database, DatabaseError
 from jira_search.search import AdvancedSearch, SearchError, JQLError, RegexError
 from jira_search.api_auth import (
     apply_rate_limit,
+    conditional_rate_limit,
     optional_api_key,
     require_api_key,
     add_api_info_headers,
@@ -273,7 +274,7 @@ def create_app(config: Config) -> Flask:
 
     @app.route("/api/v1/search")
     @app.route("/api/search")  # Backward compatibility
-    @apply_rate_limit
+    @conditional_rate_limit(config)
     @optional_api_key
     def api_search():
         """Search API endpoint.
@@ -398,7 +399,7 @@ def create_app(config: Config) -> Flask:
 
     @app.route("/api/v1/suggest")
     @app.route("/api/suggest")  # Backward compatibility
-    @apply_rate_limit
+    @conditional_rate_limit(config)
     @optional_api_key
     def api_suggest():
         """Type-ahead suggestions API endpoint.
@@ -455,7 +456,7 @@ def create_app(config: Config) -> Flask:
 
     @app.route("/api/v1/issues/<issue_key>")
     @app.route("/api/issues/<issue_key>")  # Backward compatibility
-    @apply_rate_limit
+    @conditional_rate_limit(config)
     @optional_api_key
     def api_issue_detail(issue_key):
         """Get detailed information for a specific issue.
@@ -535,7 +536,7 @@ def create_app(config: Config) -> Flask:
 
     @app.route("/api/v1/validate")
     @app.route("/api/validate")  # Backward compatibility
-    @apply_rate_limit
+    @conditional_rate_limit(config)
     @optional_api_key
     def api_validate():
         """Validate JQL or regex query syntax.

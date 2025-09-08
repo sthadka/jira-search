@@ -245,6 +245,55 @@ def apply_rate_limit(f):
     return decorated_function
 
 
+def conditional_rate_limit(config):
+    """Decorator factory that conditionally applies rate limiting based on config."""
+    
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if rate limiting is enabled in config
+            if not config.api_enable_rate_limiting:
+                # Rate limiting disabled, execute function directly
+                return f(*args, **kwargs)
+            
+            # Rate limiting enabled, apply normal rate limiting logic
+            client_id = get_client_identifier()
+            rate_limit = get_rate_limit_for_client(client_id)
+
+            allowed, rate_info = rate_limiter.is_allowed(
+                client_id, limit=rate_limit, window=60  # 1 minute window
+            )
+
+            if not allowed:
+                response = jsonify(
+                    {
+                        "error": "Rate limit exceeded",
+                        "message": f"Maximum {rate_limit} requests per minute allowed",
+                        "retry_after": rate_info["blocked_for"],
+                    }
+                )
+                response.status_code = 429
+                response.headers["X-RateLimit-Limit"] = str(rate_limit)
+                response.headers["X-RateLimit-Remaining"] = str(rate_info["remaining"])
+                response.headers["X-RateLimit-Reset"] = str(rate_info["reset_time"])
+                response.headers["Retry-After"] = str(rate_info["blocked_for"])
+                return response
+
+            # Execute the function
+            result = f(*args, **kwargs)
+
+            # Add rate limit headers to successful responses
+            if hasattr(result, "headers"):
+                result.headers["X-RateLimit-Limit"] = str(rate_limit)
+                result.headers["X-RateLimit-Remaining"] = str(rate_info["remaining"])
+                result.headers["X-RateLimit-Reset"] = str(rate_info["reset_time"])
+
+            return result
+        
+        return decorated_function
+    return decorator
+
+
 def optional_api_key(f):
     """Decorator for endpoints that optionally accept API keys."""
 
