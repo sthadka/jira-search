@@ -247,7 +247,7 @@ def apply_rate_limit(f):
 
 def conditional_rate_limit(config):
     """Decorator factory that conditionally applies rate limiting based on config."""
-    
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -255,7 +255,7 @@ def conditional_rate_limit(config):
             if not config.api_enable_rate_limiting:
                 # Rate limiting disabled, execute function directly
                 return f(*args, **kwargs)
-            
+
             # Rate limiting enabled, apply normal rate limiting logic
             client_id = get_client_identifier()
             rate_limit = get_rate_limit_for_client(client_id)
@@ -289,8 +289,9 @@ def conditional_rate_limit(config):
                 result.headers["X-RateLimit-Reset"] = str(rate_info["reset_time"])
 
             return result
-        
+
         return decorated_function
+
     return decorator
 
 

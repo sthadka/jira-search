@@ -11,7 +11,6 @@ from jira_search.config import Config
 from jira_search.database import Database, DatabaseError
 from jira_search.search import AdvancedSearch, SearchError, JQLError, RegexError
 from jira_search.api_auth import (
-    apply_rate_limit,
     conditional_rate_limit,
     optional_api_key,
     require_api_key,

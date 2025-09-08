@@ -257,7 +257,6 @@ class Config:
         """Get sync batch size."""
         return self.data.get("sync", {}).get("batch_size", 100)
 
-
     @property
     def custom_fields(self) -> List[Dict[str, str]]:
         """Get custom fields configuration."""
