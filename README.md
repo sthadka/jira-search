@@ -134,10 +134,10 @@ cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
-The pre-commit hook will run:
-- **flake8** linting
-- **black** code formatting check  
-- **pytest** unit tests
+The pre-commit hook will automatically:
+- **Auto-format code** with black
+- **Run flake8** linting
+- **Run pytest** unit tests
 
 ### Manual Quality Checks
 

@@ -42,17 +42,17 @@ if ! command -v pipenv &> /dev/null; then
     exit 1
 fi
 
+# Run black formatting (auto-fix)
+echo "🎨 Auto-formatting code with black..."
+if ! pipenv run black src/jira_search; then
+    echo "❌ Black formatting failed. Please check the errors above."
+    exit 1
+fi
+
 # Run flake8 linting
 echo "🔧 Running flake8 linting..."
 if ! pipenv run flake8 src/jira_search --max-line-length=100; then
     echo "❌ Linting failed. Please fix the issues above."
-    exit 1
-fi
-
-# Run black formatting check
-echo "🎨 Checking code formatting with black..."
-if ! pipenv run black --check src/jira_search; then
-    echo "❌ Code formatting issues found. Run 'pipenv run black src/jira_search' to fix."
     exit 1
 fi
 
@@ -71,10 +71,10 @@ chmod +x .git/hooks/pre-commit
 
 echo "✅ Pre-commit hook installed successfully!"
 echo ""
-echo "The hook will now run automatically before each commit and check:"
-echo "  - Code linting (flake8)"
-echo "  - Code formatting (black)"
-echo "  - Unit tests (pytest)"
+echo "The hook will now run automatically before each commit and will:"
+echo "  - Auto-format code (black)"
+echo "  - Run code linting (flake8)"
+echo "  - Run unit tests (pytest)"
 echo ""
 echo "To manually run the checks: .git/hooks/pre-commit"
 echo "To format code: pipenv run black src/jira_search"
