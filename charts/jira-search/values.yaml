@@ -115,7 +115,7 @@ jobs:
   initSync:
     enabled: true
     restartPolicy: OnFailure
-    backoffLimit: 3
+    backoffLimit: 6
     
   # Incremental sync cron job (every 15 minutes)
   incrementalSync:

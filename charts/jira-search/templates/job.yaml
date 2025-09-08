@@ -28,7 +28,22 @@ spec:
           {{- toYaml .Values.securityContext | nindent 10 }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["python", "-m", "jira_search", "sync", "--full"]
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting init sync job..."
+          echo "Waiting for deployment to be ready..."
+          sleep 30
+          echo "Running full sync..."
+          python -m jira_search sync --full || {
+            echo "Sync failed with exit code $?"
+            echo "Database status:"
+            ls -la /app/data/ || echo "Data directory not accessible"
+            echo "Config file:"
+            cat /app/config.yaml || echo "Config file not accessible"
+            exit 1
+          }
         env:
         - name: JIRA_PAT
           valueFrom:
