@@ -1,28 +1,46 @@
 # Multi-stage build for optimized production image
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
-# Install build dependencies
+# Install build dependencies for Python packages and SQLite
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    wget \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
-# Create virtual environment
+# Build and install SQLite 3.50.4 for consistent FTS5 ranking
+RUN wget https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz && \
+    tar xzf sqlite-autoconf-3500400.tar.gz && \
+    cd sqlite-autoconf-3500400 && \
+    ./configure --prefix=/opt/sqlite && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf sqlite-autoconf-3500400*
+
+# Create virtual environment and install Python dependencies
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-
-# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Production stage
-FROM python:3.11-slim
+FROM python:3.13-slim
 
-# Install runtime dependencies
+# Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y \
-    sqlite3 \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy SQLite from builder stage
+COPY --from=builder /opt/sqlite /usr/local
+RUN ldconfig
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Create app user for security
 RUN groupadd -g 1000 appuser && \
@@ -38,8 +56,6 @@ WORKDIR /app
 # Copy application code
 COPY src/ ./src/
 COPY setup.py .
-COPY README.md .
-COPY CLAUDE.md .
 COPY requirements.txt .
 
 # Install the application

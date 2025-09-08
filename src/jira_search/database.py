@@ -938,19 +938,50 @@ class Database:
                         total = cursor.fetchone()[0]
                         return results, total
 
-                # Fall back to FTS5 search for other queries
+                # Fall back to FTS5 search with enhanced ranking for consistent results
                 fts_query = self._sanitize_fts_query(query)
-
+                
+                # Create search term variants for better ranking
+                search_terms = query.strip().split()
+                search_like_patterns = [f"%{term}%" for term in search_terms]
+                
                 cursor = conn.execute(
                     """
-                    SELECT i.*, rank
+                    SELECT i.*, 
+                           -- Custom ranking score for consistent cross-environment results
+                           (
+                               -- Exact summary match gets highest score
+                               CASE WHEN LOWER(i.summary) LIKE LOWER(?) THEN 1000 ELSE 0 END +
+                               -- Individual term matches in summary
+                               """ + " + ".join([
+                                   f"CASE WHEN LOWER(i.summary) LIKE LOWER(?) THEN 100 ELSE 0 END"
+                                   for _ in search_terms
+                               ]) + """ +
+                               -- Key pattern match
+                               CASE WHEN LOWER(i.key) LIKE LOWER(?) THEN 500 ELSE 0 END +
+                               -- Description matches
+                               """ + " + ".join([
+                                   f"CASE WHEN LOWER(i.description) LIKE LOWER(?) THEN 50 ELSE 0 END"
+                                   for _ in search_terms
+                               ]) + """ +
+                               -- FTS5 base score (normalized to 0-100 range)
+                               CASE WHEN rank IS NOT NULL THEN (100 - rank * 10) ELSE 0 END
+                           ) as custom_rank
                     FROM issues_fts fts
                     JOIN issues i ON i.rowid = fts.rowid
                     WHERE issues_fts MATCH ? AND (i.is_deleted IS NULL OR i.is_deleted = FALSE)
-                    ORDER BY rank
+                    ORDER BY custom_rank DESC, i.updated DESC
                     LIMIT ? OFFSET ?
                 """,
-                    (fts_query, limit, offset),
+                    (
+                        f"%{query.strip()}%",  # Exact summary match
+                        *search_like_patterns,  # Individual term matches in summary
+                        f"%{query.strip()}%",  # Key pattern match
+                        *search_like_patterns,  # Description matches
+                        fts_query,  # FTS5 query
+                        limit, 
+                        offset
+                    ),
                 )
 
                 results = [dict(row) for row in cursor.fetchall()]
