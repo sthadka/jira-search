@@ -6,13 +6,10 @@ metadata:
   labels:
     {{- include "jira-search.labels" . | nindent 4 }}
     app.kubernetes.io/component: init-sync
+  {{- with .Values.jobs.initSync.annotations }}
   annotations:
-    "helm.sh/hook": post-install
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- with .Values.jobs.initSync.annotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
 spec:
   backoffLimit: {{ .Values.jobs.initSync.backoffLimit | default 3 }}
   template:
