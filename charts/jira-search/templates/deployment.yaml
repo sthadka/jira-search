@@ -35,11 +35,26 @@ spec:
             - -c
             - |
               import os
-              from jira_search.config import load_config
+              import yaml
+              from jira_search.config import Config
               from jira_search.database import Database
               
               print("Checking database...")
-              config = load_config(os.environ['CONFIG_PATH'])
+              
+              # Load config file directly without validation for DB init
+              with open(os.environ['CONFIG_PATH'], 'r') as f:
+                  config_data = yaml.safe_load(f)
+              
+              # Create minimal config for database initialization
+              db_path = config_data.get('database', {}).get('path', '/app/data/jira_search.db')
+              
+              # Create a minimal config object just for database
+              class MinimalConfig:
+                  def __init__(self, db_path):
+                      self.database_path = db_path
+                      self.custom_fields = []  # Empty for initialization
+              
+              config = MinimalConfig(db_path)
               db = Database(config)
               
               if not db.exists():
@@ -49,11 +64,6 @@ spec:
               else:
                   print("Database already exists")
           env:
-            - name: JIRA_PAT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "jira-search.fullname" . }}-secrets
-                  key: jira-pat
             - name: CONFIG_PATH
               value: "/app/config.yaml"
           volumeMounts:
