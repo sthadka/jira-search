@@ -119,6 +119,39 @@ See `charts/jira-search/values.yaml` for full configuration options including:
 - Incremental sync schedule (default: every 15 minutes)
 - Resource limits and security contexts
 
+## Development
+
+### Setup Pre-commit Hook
+
+To ensure code quality, set up the pre-commit hook that runs linting and tests:
+
+```bash
+# Automatic setup
+./scripts/setup-pre-commit.sh
+
+# Manual setup (if needed)
+cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The pre-commit hook will run:
+- **flake8** linting
+- **black** code formatting check  
+- **pytest** unit tests
+
+### Manual Quality Checks
+
+```bash
+# Run linting
+pipenv run flake8 src/jira_search --max-line-length=100
+
+# Auto-format code
+pipenv run black src/jira_search
+
+# Run tests
+pipenv run python -m pytest tests/ -v
+```
+
 ## Requirements
 
 - Python 3.8+
