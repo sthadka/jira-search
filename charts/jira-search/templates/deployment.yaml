@@ -24,6 +24,46 @@ spec:
       serviceAccountName: {{ include "jira-search.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: db-init
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: 
+            - python
+            - -c
+            - |
+              import os
+              from jira_search.config import load_config
+              from jira_search.database import Database
+              
+              print("Checking database...")
+              config = load_config(os.environ['CONFIG_PATH'])
+              db = Database(config)
+              
+              if not db.exists():
+                  print("Database not found, initializing...")
+                  db.initialize()
+                  print("Database initialized successfully")
+              else:
+                  print("Database already exists")
+          env:
+            - name: CONFIG_PATH
+              value: "/app/config.yaml"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

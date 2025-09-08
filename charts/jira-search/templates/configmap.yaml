@@ -4,9 +4,6 @@ metadata:
   name: {{ include "jira-search.fullname" . }}-config
   labels:
     {{- include "jira-search.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-2"
 data:
   config.yaml: |
     # Jira Search Configuration
