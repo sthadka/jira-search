@@ -1,0 +1,86 @@
+# Multi-stage build with Google Distroless for security
+FROM python:3.13-slim as builder
+
+# Install security updates and build dependencies
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    gcc \
+    g++ \
+    wget \
+    make \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Build and install SQLite 3.50.4 for consistent FTS5 ranking
+RUN wget --progress=dot:mega https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz && \
+    tar xzf sqlite-autoconf-3500400.tar.gz && \
+    cd sqlite-autoconf-3500400 && \
+    ./configure --prefix=/opt/sqlite \
+        --enable-fts5 \
+        --enable-rtree \
+        --disable-static \
+        --enable-shared && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf sqlite-autoconf-3500400*
+
+# Create virtual environment and install Python dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt gunicorn
+
+# Copy and install application
+COPY src/ ./src/
+COPY setup.py .
+RUN pip install -e .
+
+# Production stage - Google Distroless Python (minimal, no shell, no package manager)
+FROM gcr.io/distroless/python3-debian12:latest
+
+# Copy SQLite from builder stage
+COPY --from=builder /opt/sqlite/lib /usr/local/lib/
+COPY --from=builder /opt/sqlite/bin/sqlite3 /usr/local/bin/sqlite3
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application with proper ownership
+COPY --from=builder --chown=65532:65532 /src /app/src/
+COPY --from=builder --chown=65532:65532 /setup.py /app/setup.py
+
+# Set working directory
+WORKDIR /app
+
+# Create data directory
+RUN ["mkdir", "-p", "/app/data"]
+
+# Use distroless non-root user (65532:65532)
+USER 65532
+
+# Expose port
+EXPOSE 8080
+
+# Security labels
+LABEL name="jira-search-distroless" \
+      version="1.0" \
+      description="Jira Search Application on Distroless" \
+      security.base-image="distroless/python3" \
+      security.non-root="true" \
+      security.no-shell="true" \
+      security.updates="2025-01-08"
+
+# Default command (no shell available, direct execution)
+ENTRYPOINT ["/opt/venv/bin/gunicorn"]
+CMD ["--bind", "0.0.0.0:8080", \
+     "--workers", "4", \
+     "--timeout", "120", \
+     "--max-requests", "1000", \
+     "--max-requests-jitter", "100", \
+     "--preload", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "jira_search.wsgi:application"]

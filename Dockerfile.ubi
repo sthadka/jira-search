@@ -1,4 +1,4 @@
-# Multi-stage build with UBI for enterprise security
+# Multi-stage build with UBI for production security
 FROM registry.access.redhat.com/ubi9/python-311:latest as builder
 
 # Switch to root for build operations
@@ -43,72 +43,63 @@ COPY src/ ./src/
 COPY setup.py .
 RUN pip install -e .
 
-# Production stage - UBI Minimal for enterprise security with tools
-FROM registry.access.redhat.com/ubi9-minimal:latest
+# Production stage - UBI Micro for maximum security
+FROM registry.access.redhat.com/ubi9-micro:latest
 
-# Install minimal runtime dependencies
-RUN microdnf update -y && \
-    microdnf install -y \
-        python3.11 \
-        python3.11-libs \
-        python3.11-pip \
-        glibc \
-        libgcc \
-        shadow-utils \
-    && microdnf clean all
+# Copy Python runtime and essential libraries from builder
+COPY --from=builder /usr/bin/python3.11 /usr/bin/python3.11
+COPY --from=builder /usr/bin/python3 /usr/bin/python3
+COPY --from=builder /usr/lib64/python3.11 /usr/lib64/python3.11
+
+# Copy essential shared libraries for Python
+COPY --from=builder /lib64/ld-linux-aarch64.so.1 /lib64/
+COPY --from=builder /lib64/libc.so.6 /lib64/
+COPY --from=builder /lib64/libpthread.so.0 /lib64/
+COPY --from=builder /lib64/libdl.so.2 /lib64/
+COPY --from=builder /lib64/libutil.so.1 /lib64/
+COPY --from=builder /lib64/libm.so.6 /lib64/
+COPY --from=builder /lib64/libexpat.so.1 /lib64/
+COPY --from=builder /lib64/libz.so.1 /lib64/
 
 # Copy SQLite from builder stage
 COPY --from=builder /opt/sqlite /usr/local
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/sqlite.conf && ldconfig
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Create app user for security
-RUN groupadd -g 1000 appuser && \
-    useradd -r -u 1000 -g appuser -s /sbin/nologin -c "App User" appuser
+# Set up library path
+ENV LD_LIBRARY_PATH="/usr/local/lib:/lib64:/usr/lib64"
+
+# Create minimal directory structure
+RUN mkdir -p /app/data
+
+# Copy application from builder
+COPY --from=builder --chown=1000:1000 /opt/app-root/src/src /app/src/
+COPY --from=builder --chown=1000:1000 /opt/app-root/src/setup.py /app/setup.py
 
 # Set working directory
 WORKDIR /app
 
-# Copy application with proper ownership
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/src ./src/
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/setup.py .
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/requirements.txt .
-
-# Install the application in the production stage
-RUN pip install -e .
-
-# Create data directory with proper permissions
-RUN mkdir -p /app/data && \
-    chown -R appuser:appuser /app && \
-    chmod 755 /app && \
-    chmod 755 /app/data
-
-
-# Switch to non-root user
-USER appuser
+# Use UBI Micro's default user (1001)
+USER 1001
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/status')" || exit 1
-
 # Security and metadata labels
 LABEL name="jira-search-ubi" \
       version="1.0" \
-      description="Jira Search Application on UBI Minimal" \
-      security.base-image="ubi9-minimal" \
+      description="Jira Search Application on UBI Micro" \
+      security.base-image="ubi9-micro" \
       security.non-root="true" \
-      security.enterprise="true" \
+      security.minimal="true" \
+      security.no-shell="true" \
       security.updates="2025-01-08"
 
-# Default command with security settings
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:8080", \
+# Default command with security settings (direct execution, no shell)
+ENTRYPOINT ["/opt/venv/bin/gunicorn"]
+CMD ["--bind", "0.0.0.0:8080", \
      "--workers", "4", \
      "--timeout", "120", \
      "--max-requests", "1000", \
