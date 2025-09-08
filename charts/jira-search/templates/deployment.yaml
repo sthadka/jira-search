@@ -49,6 +49,11 @@ spec:
               else:
                   print("Database already exists")
           env:
+            - name: JIRA_PAT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jira-search.fullname" . }}-secrets
+                  key: jira-pat
             - name: CONFIG_PATH
               value: "/app/config.yaml"
           volumeMounts:
