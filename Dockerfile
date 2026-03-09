@@ -31,17 +31,15 @@ RUN wget --progress=dot:mega https://www.sqlite.org/2025/sqlite-autoconf-3500400
     cd .. && \
     rm -rf sqlite-autoconf-3500400*
 
-# Create virtual environment and install Python dependencies
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt gunicorn
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy and install application
+# Install Python dependencies using uv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+COPY pyproject.toml uv.lock ./
 COPY src/ ./src/
-COPY setup.py .
-RUN pip install -e .
+RUN uv sync --frozen --no-dev --no-editable
 
 # Production stage - UBI Minimal for enterprise security with tools
 FROM registry.access.redhat.com/ubi9-minimal:latest
@@ -73,12 +71,7 @@ RUN groupadd -g 1000 appuser && \
 WORKDIR /app
 
 # Copy application with proper ownership
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/src ./src/
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/setup.py .
-COPY --from=builder --chown=appuser:appuser /opt/app-root/src/requirements.txt .
-
-# Install the application in the production stage
-RUN pip install -e .
+COPY --from=builder --chown=appuser:appuser /opt/app-root/src/pyproject.toml .
 
 # Create data directory with proper permissions
 RUN mkdir -p /app/data && \

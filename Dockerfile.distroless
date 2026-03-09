@@ -25,17 +25,15 @@ RUN wget --progress=dot:mega https://www.sqlite.org/2025/sqlite-autoconf-3500400
     cd .. && \
     rm -rf sqlite-autoconf-3500400*
 
-# Create virtual environment and install Python dependencies
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt gunicorn
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy and install application
+# Install Python dependencies using uv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+COPY pyproject.toml uv.lock ./
 COPY src/ ./src/
-COPY setup.py .
-RUN pip install -e .
+RUN uv sync --frozen --no-dev --no-editable
 
 # Production stage - Google Distroless Python (minimal, no shell, no package manager)
 FROM gcr.io/distroless/python3-debian12:latest
@@ -48,9 +46,8 @@ COPY --from=builder /opt/sqlite/bin/sqlite3 /usr/local/bin/sqlite3
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy application with proper ownership
-COPY --from=builder --chown=65532:65532 /src /app/src/
-COPY --from=builder --chown=65532:65532 /setup.py /app/setup.py
+# Copy application metadata
+COPY --from=builder --chown=65532:65532 /pyproject.toml /app/pyproject.toml
 
 # Set working directory
 WORKDIR /app

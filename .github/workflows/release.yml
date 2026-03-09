@@ -29,34 +29,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: '3.11'
-          
+          version: "latest"
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e .
+        run: uv sync
           
       - name: Setup test configuration
         run: |
           cp config.yaml.example config.yaml
           
       - name: Run tests
-        run: |
-          python -m pytest tests/ -v --cov=jira_search
+        run: uv run pytest tests/ -v --cov=jira_search
         env:
           JIRA_URL: https://test-jira.example.com
           JIRA_USERNAME: test-user
           JIRA_PAT: test-token
           JIRA_PROJECT: TEST
-          
+
       - name: Lint code
         run: |
-          flake8 src/jira_search --max-line-length=100
-          black --check src/jira_search
+          uv run flake8 src/jira_search --max-line-length=100
+          uv run black --check src/jira_search
 
   release:
     needs: test

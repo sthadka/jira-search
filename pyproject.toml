@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jira-search-mirror"
+version = "0.1.0"
+description = "Fast local search for Jira issues"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32.0",
+    "pyyaml>=6.0.2",
+    "click>=8.1.7",
+    "flask>=3.1.0",
+    "gunicorn>=23.0.0",
+]
+
+[project.scripts]
+jira-search = "jira_search.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.3.0",
+    "black>=25.1.0",
+    "flake8>=7.3.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jira_search"]

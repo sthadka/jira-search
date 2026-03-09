@@ -30,6 +30,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# uv
+.uv/
+
 # IDEs
 .vscode/
 .idea/
