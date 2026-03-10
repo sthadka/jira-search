@@ -4,8 +4,9 @@ import sqlite3
 import json
 import logging
 import os
+from contextlib import contextmanager
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, Generator, List, Optional, Any, Tuple
 from jira_search.config import Config
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,28 @@ class Database:
         self.config = config
         self.db_path = config.database_path
         self.custom_fields = config.custom_fields
+        self._session_conn: Optional[sqlite3.Connection] = None
+
+    @contextmanager
+    def sync_session(self) -> Generator[None, None, None]:
+        """Open a single shared connection for a batch of upserts.
+
+        Use this as a context manager around bulk sync loops to avoid
+        opening and leaking one connection per issue.
+        """
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+        self._session_conn = conn
+        try:
+            yield
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._session_conn = None
+            conn.close()
 
     def exists(self) -> bool:
         """Check if database file exists."""
@@ -38,6 +61,10 @@ class Database:
         """Initialize database with schema and indexes."""
         try:
             logger.info(f"Initializing database: {self.db_path}")
+
+            db_dir = os.path.dirname(self.db_path)
+            if db_dir:
+                os.makedirs(db_dir, exist_ok=True)
 
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
@@ -390,100 +417,108 @@ class Database:
             processed_data = self._process_issue_data(issue_data)
             issue_key = processed_data["key"]
 
-            with sqlite3.connect(self.db_path, timeout=30.0) as conn:
-                # Set WAL mode for better concurrency handling
+            if self._session_conn is not None:
+                return self._upsert_with_conn(self._session_conn, processed_data, issue_data, issue_key)
+
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            try:
                 conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA busy_timeout=30000")  # 30 second timeout
-
-                # Check if issue exists in a single transaction
-                cursor = conn.execute(
-                    "SELECT key FROM issues WHERE key = ?", (issue_key,)
-                )
-                existing = cursor.fetchone()
-
-                # Build dynamic SQL based on configured core fields and custom fields
-                columns = ["key", "summary"]  # Always required
-                placeholders = ["?", "?"]
-                values = [processed_data["key"], processed_data["summary"]]
-
-                # Add configurable core fields
-                field_mappings = {
-                    "description": "description",
-                    "status": ["status_id", "status_name"],
-                    "priority": ["priority_id", "priority_name"],
-                    "assignee": [
-                        "assignee_key",
-                        "assignee_name",
-                        "assignee_display_name",
-                    ],
-                    "reporter": [
-                        "reporter_key",
-                        "reporter_name",
-                        "reporter_display_name",
-                    ],
-                    "created": "created",
-                    "updated": "updated",
-                    "comment": "comments",
-                    "labels": "labels",
-                    "components": "components",
-                    "fixVersions": "fix_versions",
-                    "affectedVersions": "affected_versions",
-                }
-
-                for field in self.config.core_fields:
-                    if field in ["key", "summary"]:
-                        continue  # Already handled
-
-                    if field in field_mappings:
-                        mapping = field_mappings[field]
-                        if isinstance(mapping, list):
-                            # Multiple columns for this field
-                            for col in mapping:
-                                columns.append(col)
-                                placeholders.append("?")
-                                values.append(processed_data.get(col))
-                        else:
-                            # Single column
-                            columns.append(mapping)
-                            placeholders.append("?")
-                            values.append(processed_data.get(mapping))
-
-                # Add project and issue type (commonly needed)
-                columns.extend(["project_key", "project_name", "issue_type"])
-                placeholders.extend(["?", "?", "?"])
-                values.extend(
-                    [
-                        processed_data.get("project_key"),
-                        processed_data.get("project_name"),
-                        processed_data.get("issue_type"),
-                    ]
-                )
-
-                # Add custom fields
-                for field in self.custom_fields:
-                    column_name = f"custom_{field['id'].replace('customfield_', '')}"
-                    columns.append(column_name)
-                    placeholders.append("?")
-                    values.append(processed_data.get(field["id"]))
-
-                # Add metadata fields
-                columns.extend(["raw_json"])
-                placeholders.extend(["?"])
-                values.append(json.dumps(issue_data))
-
-                sql = f"""
-                INSERT OR REPLACE INTO issues (
-                    {', '.join(columns)}
-                ) VALUES ({', '.join(placeholders)})
-                """
-
-                conn.execute(sql, values)
-                return existing is not None
+                conn.execute("PRAGMA busy_timeout=30000")
+                result = self._upsert_with_conn(conn, processed_data, issue_data, issue_key)
+                conn.commit()
+                return result
+            finally:
+                conn.close()
 
         except sqlite3.Error as e:
             raise DatabaseError(
                 f"Failed to upsert issue {issue_data.get('key', 'unknown')}: {e}"
             )
+
+    def _upsert_with_conn(
+        self,
+        conn: sqlite3.Connection,
+        processed_data: Dict[str, Any],
+        issue_data: Dict[str, Any],
+        issue_key: str,
+    ) -> bool:
+        """Execute the upsert SQL using an existing connection."""
+        cursor = conn.execute(
+            "SELECT key FROM issues WHERE key = ?", (issue_key,)
+        )
+        existing = cursor.fetchone()
+
+        columns = ["key", "summary"]
+        placeholders = ["?", "?"]
+        values = [processed_data["key"], processed_data["summary"]]
+
+        field_mappings = {
+            "description": "description",
+            "status": ["status_id", "status_name"],
+            "priority": ["priority_id", "priority_name"],
+            "assignee": [
+                "assignee_key",
+                "assignee_name",
+                "assignee_display_name",
+            ],
+            "reporter": [
+                "reporter_key",
+                "reporter_name",
+                "reporter_display_name",
+            ],
+            "created": "created",
+            "updated": "updated",
+            "comment": "comments",
+            "labels": "labels",
+            "components": "components",
+            "fixVersions": "fix_versions",
+            "affectedVersions": "affected_versions",
+        }
+
+        for field in self.config.core_fields:
+            if field in ["key", "summary"]:
+                continue
+
+            if field in field_mappings:
+                mapping = field_mappings[field]
+                if isinstance(mapping, list):
+                    for col in mapping:
+                        columns.append(col)
+                        placeholders.append("?")
+                        values.append(processed_data.get(col))
+                else:
+                    columns.append(mapping)
+                    placeholders.append("?")
+                    values.append(processed_data.get(mapping))
+
+        columns.extend(["project_key", "project_name", "issue_type"])
+        placeholders.extend(["?", "?", "?"])
+        values.extend(
+            [
+                processed_data.get("project_key"),
+                processed_data.get("project_name"),
+                processed_data.get("issue_type"),
+            ]
+        )
+
+        for field in self.custom_fields:
+            column_name = f"custom_{field['id'].replace('customfield_', '')}"
+            columns.append(column_name)
+            placeholders.append("?")
+            values.append(processed_data.get(field["id"]))
+
+        columns.append("raw_json")
+        placeholders.append("?")
+        values.append(json.dumps(issue_data))
+
+        sql = f"""
+        INSERT OR REPLACE INTO issues (
+            {', '.join(columns)}
+        ) VALUES ({', '.join(placeholders)})
+        """
+
+        conn.execute(sql, values)
+        return existing is not None
 
     def _process_issue_data(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process raw Jira issue data for database storage.

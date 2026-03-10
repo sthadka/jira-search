@@ -461,10 +461,9 @@ def sync(
         updated_count = 0
         error_count = 0
 
-        with click.progressbar(length=total_issues, label="Syncing issues") as bar:
+        with db.sync_session(), click.progressbar(length=total_issues, label="Syncing issues") as bar:
             for issue in client.search_issues_paginated(sync_jql):
                 try:
-                    # Use the database method that handles existence checking internally
                     was_existing = db.upsert_issue_with_stats(issue)
                     synced_count += 1
 
@@ -479,7 +478,7 @@ def sync(
                         f"Failed to sync issue {issue.get('key', 'unknown')}: {e}"
                     )
                     error_count += 1
-                    bar.update(1)  # Still update progress even on error
+                    bar.update(1)
 
         sync_duration = time.time() - sync_start_time
 
@@ -784,6 +783,7 @@ def status(ctx):
         stats = db.get_statistics()
 
         click.echo("📊 Database Statistics:")
+        click.echo(f"  Database path: {db.db_path}")
         click.echo(f"  Total issues: {stats['total_issues']}")
         click.echo(f"  Database size: {stats['database_size_mb']:.1f} MB")
 
